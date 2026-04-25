@@ -1,0 +1,42 @@
+<script lang="ts">
+	import '../app.css';
+	import { page } from '$app/stores';
+	import { siteConfig } from '$lib/config/site';
+	import NavBar from '$lib/components/NavBar.svelte';
+
+	let { children } = $props();
+
+	// 文章详情页自己输出 og:image / twitter:image / og:title 等，避免重复
+	let isPostDetail = $derived(/^\/posts\/[^/]+\/?$/.test($page.url.pathname));
+	let shareImage = $derived(
+		siteConfig.icon.startsWith('http') ? siteConfig.icon : `${siteConfig.url}${siteConfig.icon}`
+	);
+</script>
+
+<svelte:head>
+	<title>{siteConfig.title}</title>
+	<link rel="icon" href={siteConfig.icon} />
+	<meta name="description" content={siteConfig.description} />
+	<meta name="keywords" content={siteConfig.keywords.join(', ')} />
+	<meta property="og:site_name" content={siteConfig.title} />
+	<meta property="og:locale" content={siteConfig.lang} />
+	{#if !isPostDetail}
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={siteConfig.url} />
+		<meta property="og:title" content={siteConfig.title} />
+		<meta property="og:description" content={siteConfig.description} />
+		<meta property="og:image" content={shareImage} />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={siteConfig.title} />
+		<meta name="twitter:description" content={siteConfig.description} />
+		<meta name="twitter:image" content={shareImage} />
+	{/if}
+	<link rel="canonical" href={siteConfig.url} />
+
+	<!-- RSS Feed -->
+	<link rel="alternate" type="application/rss+xml" title="{siteConfig.title} RSS Feed" href="/rss.xml" />
+</svelte:head>
+
+<NavBar />
+
+{@render children()}

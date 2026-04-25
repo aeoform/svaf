@@ -17,6 +17,11 @@ export const siteConfig = {
 		bio: '记录、整理与分享。',
 		links: [
 			{
+				name: 'GitHub',
+				url: 'https://github.com/aeoform/svaf',
+				icon: 'simple-icons:github'
+			},
+			{
 				name: 'Bilibili',
 				url: 'https://space.bilibili.com/1163451547',
 				icon: 'simple-icons:bilibili'
@@ -24,7 +29,7 @@ export const siteConfig = {
 		]
 	},
 	links: {
-		github: ''
+		github: 'https://github.com/aeoform/svaf'
 	},
 	announcement: {
 		enable: false,

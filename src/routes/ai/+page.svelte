@@ -15,6 +15,7 @@
 		type AiModelStatus
 	} from '$lib/ai/console';
 	import { siteConfig } from '$lib/config/site';
+	import { renderAiMarkdown } from '$lib/utils/ai-markdown';
 
 	let session = $state<Awaited<ReturnType<typeof fetchAiSession>> | null>(null);
 	let conversations = $state<AiConversation[]>([]);
@@ -557,7 +558,7 @@
 								{#each messages as message}
 									<div class={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
 										<div
-											class={`max-w-[78%] rounded-[1.5rem] border px-4 py-3 text-sm leading-7 whitespace-pre-wrap break-words ${
+											class={`max-w-[78%] rounded-[1.5rem] border px-4 py-3 text-sm leading-7 break-words ${
 												message.role === 'user'
 													? 'border-slate-200/80 bg-slate-100 text-slate-950'
 													: 'border-slate-700/70 bg-slate-900/85 text-slate-100'
@@ -566,7 +567,13 @@
 											<div class="mb-2 text-[10px] uppercase tracking-[0.3em] opacity-60">
 												{message.role === 'user' ? '你' : '助手'}
 											</div>
-											{message.content}
+											<div
+												class={`ai-message-markdown ${
+													message.role === 'user' ? 'prose prose-sm prose-neutral' : 'prose prose-sm prose-invert'
+												} max-w-none break-words`}
+											>
+												{@html renderAiMarkdown(message.content)}
+											</div>
 										</div>
 									</div>
 								{/each}

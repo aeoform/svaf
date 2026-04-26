@@ -167,4 +167,63 @@
 	.markdown-alert-important { --alert-color: oklch(0.55 0.2 300); }
 	.markdown-alert-warning { --alert-color: oklch(0.7 0.18 80); }
 	.markdown-alert-caution { --alert-color: var(--destructive); }
+
+	.ai-message-markdown {
+		overflow-wrap: anywhere;
+	}
+	.ai-message-markdown p {
+		margin-top: 0.5rem;
+		margin-bottom: 0.5rem;
+	}
+	.ai-message-markdown p:first-child {
+		margin-top: 0;
+	}
+	.ai-message-markdown p:last-child {
+		margin-bottom: 0;
+	}
+	.ai-message-markdown ul,
+	.ai-message-markdown ol {
+		margin: 0.5rem 0;
+		padding-left: 1.25rem;
+	}
+	.ai-message-markdown blockquote {
+		margin: 0.75rem 0;
+		padding-left: 1rem;
+		border-left: 3px solid color-mix(in oklab, currentColor 35%, transparent);
+		opacity: 0.92;
+	}
+	.ai-message-markdown pre {
+		margin: 0.75rem 0;
+		overflow-x: auto;
+		border-radius: 1rem;
+		padding: 0.9rem 1rem;
+		background: color-mix(in oklab, currentColor 8%, transparent);
+	}
+	.ai-message-markdown code {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+	}
+	.ai-message-markdown :not(pre) > code {
+		padding: 0.15rem 0.35rem;
+		border-radius: 0.45rem;
+		background: color-mix(in oklab, currentColor 10%, transparent);
+	}
+	.ai-math-inline,
+	.ai-math-block {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+		border-radius: 0.5rem;
+		background: color-mix(in oklab, currentColor 10%, transparent);
+	}
+	.ai-math-inline {
+		padding: 0.08rem 0.4rem;
+	}
+	.ai-math-inline-double,
+	.ai-math-block {
+		background: color-mix(in oklab, currentColor 12%, transparent);
+	}
+	.ai-math-block {
+		display: block;
+		margin: 0.75rem 0;
+		padding: 0.85rem 1rem;
+		white-space: pre-wrap;
+	}
 }

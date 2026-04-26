@@ -29,6 +29,15 @@ export type AiMessage = {
 	createdAt: string;
 };
 
+export type AiModelStatus = {
+	enabled: boolean;
+	provider: string;
+	model: string;
+	baseUrl: string;
+	path: string;
+	variables: Record<string, boolean>;
+};
+
 type ApiSuccess<T> = { ok: true } & T;
 type ApiFailure = { ok: false; error?: string };
 
@@ -101,4 +110,17 @@ export async function sendAiChatMessage(payload: {
 		ApiSuccess<{ messages: AiMessage[]; conversation: AiConversation; reply: string }>
 	>(response, '发送消息失败');
 	return data;
+}
+
+export async function fetchAiModelStatus() {
+	const response = await fetch('/ai/model-status', {
+		credentials: 'include'
+	});
+
+	const data = await readJson<ApiSuccess<{ model: AiModelStatus }>>(
+		response,
+		'无法获取模型状态'
+	);
+
+	return data.model;
 }

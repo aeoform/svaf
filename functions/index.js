@@ -261,6 +261,10 @@ export default {
 			return proxyAiEndpoint(request, url.pathname);
 		}
 
+		if (url.pathname === '/ai/model-status' && request.method === 'GET') {
+			return proxyAiEndpoint(request, '/ai/model-status');
+		}
+
 		if (url.pathname === '/auth/logout' && request.method === 'POST') {
 			return logout(request);
 		}

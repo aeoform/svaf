@@ -206,11 +206,12 @@ async function proxyAiEndpoint(request, backendPath) {
 			headers['content-type'] = request.headers.get('content-type') || 'application/json';
 		}
 
+		const timeoutMs = backendPath === '/ai/chat/start' ? 45000 : 20000;
 		const { response: upstream, data } = await fetchJsonWithTimeout(backendUrl.toString(), {
 			method,
 			headers,
 			body
-		});
+		}, timeoutMs);
 
 		if (!upstream.ok || !data || !data.ok) {
 			return json(data || { ok: false, error: 'request failed' }, { status: upstream.status || 502 });

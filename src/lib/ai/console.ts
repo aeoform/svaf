@@ -93,6 +93,7 @@ export async function startAiChatStream(payload: {
 	conversationId?: string | null;
 	moduleSlug?: string;
 	content: string;
+	clientRequestId?: string;
 }) {
 	const response = await fetch('/ai/chat/start', {
 		method: 'POST',
@@ -101,7 +102,8 @@ export async function startAiChatStream(payload: {
 		body: JSON.stringify({
 			conversationId: payload.conversationId || null,
 			moduleSlug: payload.moduleSlug || 'chat',
-			content: payload.content
+			content: payload.content,
+			clientRequestId: payload.clientRequestId || ''
 		})
 	});
 

@@ -234,6 +234,7 @@
 
 		const content = composer.trim();
 		if (!content) return;
+		const clientRequestId = crypto.randomUUID();
 
 		sending = true;
 		chatError = '';
@@ -259,11 +260,35 @@
 			messages = [...messages, userMessage, assistantMessage];
 			composer = '';
 
-			const start = await startAiChatStream({
-				conversationId: selectedConversation?.id ?? null,
-				moduleSlug: 'chat',
-				content
-			});
+			let start: Awaited<ReturnType<typeof startAiChatStream>> | null = null;
+			let lastError: unknown = null;
+			for (let attempt = 0; attempt < 2; attempt += 1) {
+				try {
+					start = await startAiChatStream({
+						conversationId: selectedConversation?.id ?? null,
+						moduleSlug: 'chat',
+						content,
+						clientRequestId
+					});
+					lastError = null;
+					break;
+				} catch (err) {
+					lastError = err;
+					const message = err instanceof Error ? err.message : '发送失败';
+					const shouldRetry =
+						attempt === 0 &&
+						(message.includes('无法开始对话') ||
+							message.includes('auth backend timeout') ||
+							message.includes('auth backend unreachable') ||
+							message.includes('request failed'));
+					if (!shouldRetry) break;
+					await new Promise((resolve) => setTimeout(resolve, 300));
+				}
+			}
+
+			if (!start) {
+				throw lastError instanceof Error ? lastError : new Error('发送失败');
+			}
 
 			upsertConversation(start.conversation);
 			draftMode = false;

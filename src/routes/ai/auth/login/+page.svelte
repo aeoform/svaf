@@ -33,8 +33,8 @@
 			try {
 				await loginAi(cleanEmail, cleanPassword);
 				goto(getRedirectTarget(), { replaceState: true });
-			} catch {
-				error = '无法连接登录服务';
+			} catch (err) {
+				error = err instanceof Error ? err.message : '无法连接登录服务';
 			} finally {
 				loading = false;
 			}

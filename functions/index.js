@@ -1,4 +1,14 @@
-const AUTH_API_ORIGIN = process.env.AUTH_API_ORIGIN || 'https://ai.aeoform.com';
+function getAuthApiOrigin() {
+	const raw = globalThis.process?.env?.AUTH_API_ORIGIN;
+	if (typeof raw === 'string') {
+		const value = raw.trim();
+		if (value) return value;
+	}
+
+	return 'https://ai.aeoform.com';
+}
+
+const AUTH_API_ORIGIN = getAuthApiOrigin();
 
 function json(body, init = {}) {
 	return new Response(JSON.stringify(body), {
@@ -23,6 +33,22 @@ function readCookie(request, name) {
 	return part ? decodeURIComponent(part.slice(prefix.length)) : '';
 }
 
+async function fetchJsonWithTimeout(url, init = {}, timeoutMs = 8000) {
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort('timeout'), timeoutMs);
+
+	try {
+		const response = await fetch(url, {
+			...init,
+			signal: controller.signal
+		});
+		const data = await response.json().catch(() => null);
+		return { response, data };
+	} finally {
+		clearTimeout(timeout);
+	}
+}
+
 async function proxyLogin(request) {
 	const requestOrigin = new URL(request.url).origin;
 	if (AUTH_API_ORIGIN === requestOrigin) {
@@ -35,26 +61,36 @@ async function proxyLogin(request) {
 		);
 	}
 
-	const body = await request.text();
-	const upstream = await fetch(`${AUTH_API_ORIGIN}/auth/login`, {
-		method: 'POST',
-		headers: {
-			'content-type': request.headers.get('content-type') || 'application/json'
-		},
-		body
-	});
-	const data = await upstream.json().catch(() => null);
-	if (!upstream.ok || !data || !data.ok || !data.token) {
-		return json(data || { ok: false, error: 'login failed' }, { status: upstream.status || 401 });
+	try {
+		const body = await request.text();
+		const { response: upstream, data } = await fetchJsonWithTimeout(
+			`${AUTH_API_ORIGIN}/auth/login`,
+			{
+				method: 'POST',
+				headers: {
+					'content-type': request.headers.get('content-type') || 'application/json'
+				},
+				body
+			}
+		);
+		if (!upstream.ok || !data || !data.ok || !data.token) {
+			return json(data || { ok: false, error: 'login failed' }, { status: upstream.status || 502 });
+		}
+
+		const headers = new Headers({ 'content-type': 'application/json; charset=utf-8' });
+		headers.append('set-cookie', `ai-session=${encodeURIComponent(data.token)}; ${cookieAttrs(request)}`);
+
+		return new Response(JSON.stringify({ ok: true, user: data.user }), {
+			status: 200,
+			headers
+		});
+	} catch (error) {
+		const message =
+			error instanceof Error && error.name === 'AbortError'
+				? 'auth backend timeout'
+				: 'auth backend unreachable';
+		return json({ ok: false, error: message }, { status: 502 });
 	}
-
-	const headers = new Headers({ 'content-type': 'application/json; charset=utf-8' });
-	headers.append('set-cookie', `ai-session=${encodeURIComponent(data.token)}; ${cookieAttrs(request)}`);
-
-	return new Response(JSON.stringify({ ok: true, user: data.user }), {
-		status: 200,
-		headers
-	});
 }
 
 async function proxyMe(request) {
@@ -74,18 +110,28 @@ async function proxyMe(request) {
 		return json({ ok: false, error: 'missing token' }, { status: 401 });
 	}
 
-	const upstream = await fetch(`${AUTH_API_ORIGIN}/auth/me`, {
-		headers: {
-			authorization: `Bearer ${token}`
+	try {
+		const { response: upstream, data } = await fetchJsonWithTimeout(
+			`${AUTH_API_ORIGIN}/auth/me`,
+			{
+				headers: {
+					authorization: `Bearer ${token}`
+				}
+			}
+		);
+
+		if (!upstream.ok || !data || !data.ok) {
+			return json(data || { ok: false, error: 'invalid token' }, { status: upstream.status || 502 });
 		}
-	});
 
-	const data = await upstream.json().catch(() => null);
-	if (!upstream.ok || !data || !data.ok) {
-		return json(data || { ok: false, error: 'invalid token' }, { status: upstream.status || 401 });
+		return json({ ok: true, user: data.user });
+	} catch (error) {
+		const message =
+			error instanceof Error && error.name === 'AbortError'
+				? 'auth backend timeout'
+				: 'auth backend unreachable';
+		return json({ ok: false, error: message }, { status: 502 });
 	}
-
-	return json({ ok: true, user: data.user });
 }
 
 function logout(request) {

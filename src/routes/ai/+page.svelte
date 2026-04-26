@@ -28,8 +28,10 @@
 	let error = $state('');
 	let chatError = $state('');
 	let sidebarCollapsed = $state(false);
+	let historySidebarCollapsed = $state(false);
 	let composer = $state('');
 	let draftMode = $state(false);
+	const showHistorySidebar = true;
 
 	let selectedConversationId = $derived($page.url.searchParams.get('conversation') ?? '');
 	let selectedConversation = $derived(
@@ -53,9 +55,19 @@
 		localStorage.setItem('ai-sidebar-collapsed', sidebarCollapsed ? '1' : '0');
 	}
 
+	function persistHistorySidebarState() {
+		if (!browser) return;
+		localStorage.setItem('ai-history-sidebar-collapsed', historySidebarCollapsed ? '1' : '0');
+	}
+
 	function toggleSidebar() {
 		sidebarCollapsed = !sidebarCollapsed;
 		persistSidebarState();
+	}
+
+	function toggleHistorySidebar() {
+		historySidebarCollapsed = !historySidebarCollapsed;
+		persistHistorySidebarState();
 	}
 
 	function updateQuery(next: Record<string, string | null>) {
@@ -354,6 +366,7 @@
 
 		if (browser) {
 			sidebarCollapsed = localStorage.getItem('ai-sidebar-collapsed') === '1';
+			historySidebarCollapsed = localStorage.getItem('ai-history-sidebar-collapsed') === '1';
 		}
 
 		void (async () => {
@@ -401,10 +414,10 @@
 
 <main class="h-[calc(100dvh-5rem)] w-full overflow-hidden px-0 py-0 text-white">
 	<section
-		style={`--sidebar-width:${sidebarCollapsed ? '3.25rem' : '20rem'}`}
+		style={`--sidebar-width:${sidebarCollapsed ? '3.25rem' : '20rem'};--history-width:${historySidebarCollapsed ? '3.25rem' : '20rem'}`}
 		class="h-full overflow-hidden border-y border-slate-800/80 bg-[radial-gradient(circle_at_top_left,rgba(15,118,110,0.22),transparent_30%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_26%),linear-gradient(180deg,rgba(2,6,23,0.97),rgba(15,23,42,0.95))] shadow-2xl shadow-black/35 backdrop-blur"
 	>
-		<div class="grid h-full min-h-0 gap-0 lg:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]">
+		<div class="grid h-full min-h-0 gap-0 lg:grid-cols-[var(--sidebar-width)_minmax(0,1fr)_var(--history-width)]">
 			<aside class={`border-b border-slate-800/80 bg-slate-950/80 transition-[width] duration-300 ease-out lg:h-full lg:overflow-y-auto lg:border-b-0 lg:border-r scrollbar-hide ${
 				sidebarCollapsed ? 'p-1' : 'p-3'
 			}`}>
@@ -432,66 +445,22 @@
 				</div>
 
 				{#if !sidebarCollapsed}
-					<div class="mt-5 grid min-h-0 gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
-						<section class="flex min-h-0 flex-col rounded-3xl border border-slate-700/70 bg-slate-900/70 p-4">
-							<div class="flex items-center justify-between gap-3">
-								<div>
-									<p class="text-sm uppercase tracking-[0.3em] text-sky-200/55">历史对话</p>
-									<p class="mt-1 text-xs text-slate-300/70">{historyItems.length} 条记录</p>
-								</div>
-								<button
-									type="button"
-									class="rounded-full border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-[11px] uppercase tracking-[0.25em] text-slate-200 transition hover:bg-slate-800/80"
-									onclick={newConversation}
-								>
-									新对话
-								</button>
+					<div class="mt-5 rounded-3xl border border-slate-700/70 bg-slate-900/70 p-4">
+						<div class="flex items-center justify-between gap-3">
+							<div>
+								<p class="text-sm uppercase tracking-[0.3em] text-sky-200/55">工具栏</p>
+								<p class="mt-1 text-xs text-slate-300/70">当前应用的操作入口</p>
 							</div>
+							<button
+								type="button"
+								class="rounded-full border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-[11px] uppercase tracking-[0.25em] text-slate-200 transition hover:bg-slate-800/80"
+								onclick={newConversation}
+							>
+								新对话
+							</button>
+						</div>
 
-							<div class="scrollbar-hide mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
-								{#if error}
-									<div class="rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-50">
-										{error}
-									</div>
-								{/if}
-
-								{#if loading && !conversations.length}
-									<div class="rounded-2xl border border-slate-700/70 bg-slate-950/70 p-4 text-sm text-slate-300">
-										正在加载历史对话...
-									</div>
-								{:else if historyItems.length === 0}
-									<div class="rounded-2xl border border-slate-700/70 bg-slate-950/70 p-4 text-sm text-slate-300">
-										暂无历史对话
-									</div>
-								{:else}
-									{#each historyItems as conversation}
-										<button
-											type="button"
-											class={`w-full rounded-2xl border px-4 py-3 text-left transition ${
-												conversation.id === selectedConversation?.id
-													? 'border-sky-300/40 bg-sky-400/10'
-													: 'border-slate-700/70 bg-slate-950/70 hover:border-slate-500/70 hover:bg-slate-800/80'
-											}`}
-											onclick={() => openConversation(conversation)}
-										>
-											<div class="flex items-center justify-between gap-3">
-												<div class="min-w-0">
-													<p class="truncate text-sm font-medium text-slate-100">
-														{conversation.title || '未命名对话'}
-													</p>
-													<p class="mt-1 truncate text-xs text-slate-300/75">{conversation.summary || '暂无摘要'}</p>
-												</div>
-												<span class="shrink-0 rounded-full border border-slate-700/80 px-2 py-1 text-[10px] uppercase tracking-[0.25em] text-slate-300">
-													对话
-												</span>
-											</div>
-										</button>
-									{/each}
-								{/if}
-							</div>
-						</section>
-
-						<section class="flex min-h-0 flex-col gap-4">
+						<div class="mt-4 grid gap-4">
 							<div class="rounded-3xl border border-sky-300/20 bg-slate-900/80 p-4">
 								<div class="flex items-center justify-between gap-3">
 									<div>
@@ -552,50 +521,7 @@
 									</button>
 								</div>
 							</div>
-
-							<div class="flex min-h-0 flex-1 flex-col rounded-3xl border border-slate-700/70 bg-slate-900/70 p-4">
-								<div class="flex items-center justify-between gap-3">
-									<div>
-										<p class="text-sm uppercase tracking-[0.3em] text-sky-200/55">聊天记录</p>
-										<p class="mt-1 text-xs text-slate-300/70">{recentMessages.length} 条最近消息</p>
-									</div>
-									<span class="rounded-full border border-slate-700/80 px-2.5 py-1 text-[10px] uppercase tracking-[0.25em] text-slate-300">
-										{selectedConversation?.moduleSlug ?? 'chat'}
-									</span>
-								</div>
-
-								<div class="scrollbar-hide mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
-									{#if recentMessages.length === 0}
-										<div class="rounded-2xl border border-slate-700/70 bg-slate-950/70 p-4 text-sm text-slate-300">
-											暂无聊天记录
-										</div>
-									{:else}
-										{#each recentMessages as message}
-											<div class={`rounded-2xl border px-3 py-2 text-xs leading-5 ${
-												message.role === 'user'
-													? 'border-slate-200/80 bg-slate-100 text-slate-950'
-													: 'border-slate-700/70 bg-slate-950/80 text-slate-100'
-											}`}>
-												<div class="mb-1 flex items-center justify-between gap-3">
-													<span class="uppercase tracking-[0.25em] opacity-60">
-														{message.role === 'user' ? '你' : '助手'}
-													</span>
-													<span class="opacity-50">
-														{new Date(message.createdAt).toLocaleTimeString('zh-CN', {
-															hour: '2-digit',
-															minute: '2-digit'
-														})}
-													</span>
-												</div>
-												<div class="line-clamp-3 overflow-hidden whitespace-pre-wrap break-words">
-													{@html renderAiMarkdown(message.content)}
-												</div>
-											</div>
-										{/each}
-									{/if}
-								</div>
-							</div>
-						</section>
+						</div>
 					</div>
 				{/if}
 			</aside>
@@ -692,6 +618,73 @@
 					</form>
 				</div>
 			</div>
+
+			{#if showHistorySidebar}
+				<aside class={`min-h-0 border-l border-slate-800/80 bg-slate-950/80 p-4 transition-all duration-300 lg:h-full lg:overflow-y-auto scrollbar-hide ${
+					historySidebarCollapsed ? 'w-12 overflow-hidden p-2' : ''
+				}`}>
+					<div class="flex items-center justify-between gap-3">
+						{#if !historySidebarCollapsed}
+							<div>
+								<p class="text-sm uppercase tracking-[0.3em] text-sky-200/55">历史记录</p>
+								<p class="mt-1 text-xs text-slate-300/70">{historyItems.length} 条会话</p>
+							</div>
+						{/if}
+						<button
+							type="button"
+							class="rounded-full border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] uppercase tracking-[0.25em] text-slate-200 transition hover:bg-slate-800/80"
+							onclick={toggleHistorySidebar}
+							aria-label={historySidebarCollapsed ? '展开历史栏' : '收起历史栏'}
+						>
+							{historySidebarCollapsed ? '»' : '«'}
+						</button>
+					</div>
+
+					{#if !historySidebarCollapsed}
+						<div class="scrollbar-hide mt-3 min-h-0 space-y-2 overflow-y-auto">
+							{#if error}
+								<div class="rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-50">
+									{error}
+								</div>
+							{/if}
+
+							{#if loading && !conversations.length}
+								<div class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 text-sm text-slate-300">
+									正在加载历史对话...
+								</div>
+							{:else if historyItems.length === 0}
+								<div class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 text-sm text-slate-300">
+									暂无历史对话
+								</div>
+							{:else}
+								{#each historyItems as conversation}
+									<button
+										type="button"
+										class={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+											conversation.id === selectedConversation?.id
+												? 'border-sky-300/40 bg-sky-400/10'
+												: 'border-slate-700/70 bg-slate-900/70 hover:border-slate-500/70 hover:bg-slate-800/80'
+										}`}
+										onclick={() => openConversation(conversation)}
+									>
+										<div class="flex items-center justify-between gap-3">
+											<div class="min-w-0">
+												<p class="truncate text-sm font-medium text-slate-100">
+													{conversation.title || '未命名对话'}
+												</p>
+												<p class="mt-1 truncate text-xs text-slate-300/75">{conversation.summary || '暂无摘要'}</p>
+											</div>
+											<span class="shrink-0 rounded-full border border-slate-700/80 px-2 py-1 text-[10px] uppercase tracking-[0.25em] text-slate-300">
+												对话
+											</span>
+										</div>
+									</button>
+								{/each}
+							{/if}
+						</div>
+					{/if}
+				</aside>
+			{/if}
 		</div>
 	</section>
 </main>

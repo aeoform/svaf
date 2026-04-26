@@ -21,6 +21,14 @@ export type AiConversation = {
 	updatedAt: string;
 };
 
+export type AiMessage = {
+	id: string;
+	conversationId: string;
+	role: 'user' | 'assistant' | string;
+	content: string;
+	createdAt: string;
+};
+
 type ApiSuccess<T> = { ok: true } & T;
 type ApiFailure = { ok: false; error?: string };
 
@@ -58,4 +66,39 @@ export async function fetchAiConversations(moduleSlug = '') {
 		'无法获取历史对话'
 	);
 	return data.conversations;
+}
+
+export async function fetchAiConversationMessages(conversationId: string) {
+	const response = await fetch(`/ai/conversations/${conversationId}/messages`, {
+		credentials: 'include'
+	});
+
+	const data = await readJson<ApiSuccess<{ messages: AiMessage[]; conversation: AiConversation }>>(
+		response,
+		'无法获取消息'
+	);
+
+	return data;
+}
+
+export async function sendAiChatMessage(payload: {
+	conversationId?: string | null;
+	moduleSlug?: string;
+	content: string;
+}) {
+	const response = await fetch('/ai/chat', {
+		method: 'POST',
+		credentials: 'include',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify({
+			conversationId: payload.conversationId || null,
+			moduleSlug: payload.moduleSlug || 'chat',
+			content: payload.content
+		})
+	});
+
+	const data = await readJson<
+		ApiSuccess<{ messages: AiMessage[]; conversation: AiConversation; reply: string }>
+	>(response, '发送消息失败');
+	return data;
 }

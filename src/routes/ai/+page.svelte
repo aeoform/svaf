@@ -40,6 +40,7 @@
 				: conversations[0] ?? null
 	);
 	let historyItems = $derived(conversations);
+	let recentMessages = $derived(messages.slice(-8));
 
 	let loadToken = 0;
 	let streamToken = 0;
@@ -431,50 +432,23 @@
 				</div>
 
 				{#if !sidebarCollapsed}
-					<div class="mt-5 space-y-5">
-						<section>
-							<div class="flex items-center justify-between gap-3">
-								<div>
-									<p class="text-sm uppercase tracking-[0.3em] text-sky-200/55">功能列表</p>
-									<p class="mt-1 text-xs text-slate-300/70">目前只保留 AI 对话</p>
-								</div>
-								<button
-									type="button"
-									class="rounded-full border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] uppercase tracking-[0.25em] text-slate-200 transition hover:bg-slate-800/80"
-									onclick={newConversation}
-								>
-									新对话
-								</button>
-							</div>
-							<div class="mt-3">
-								<button
-									type="button"
-									class="flex w-full items-start gap-3 rounded-2xl border border-sky-300/30 bg-sky-400/10 px-4 py-3 text-left transition"
-									onclick={newConversation}
-								>
-									<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-700/80 bg-slate-950/80 text-xs uppercase tracking-[0.25em] text-slate-200">
-										AI
-									</div>
-									<div>
-										<h2 class="text-sm font-medium text-slate-100">AI 对话</h2>
-										<p class="mt-1 text-xs leading-5 text-slate-300/80">基础聊天、历史记录、后续模型接入都从这里开始。</p>
-									</div>
-								</button>
-							</div>
-						</section>
-
-						<section>
+					<div class="mt-5 grid min-h-0 gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
+						<section class="flex min-h-0 flex-col rounded-3xl border border-slate-700/70 bg-slate-900/70 p-4">
 							<div class="flex items-center justify-between gap-3">
 								<div>
 									<p class="text-sm uppercase tracking-[0.3em] text-sky-200/55">历史对话</p>
 									<p class="mt-1 text-xs text-slate-300/70">{historyItems.length} 条记录</p>
 								</div>
-								<span class="rounded-full border border-slate-700/80 px-2.5 py-1 text-[10px] uppercase tracking-[0.25em] text-slate-300">
-									chat
-								</span>
+								<button
+									type="button"
+									class="rounded-full border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-[11px] uppercase tracking-[0.25em] text-slate-200 transition hover:bg-slate-800/80"
+									onclick={newConversation}
+								>
+									新对话
+								</button>
 							</div>
 
-							<div class="scrollbar-hide mt-3 space-y-2 overflow-y-auto">
+							<div class="scrollbar-hide mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
 								{#if error}
 									<div class="rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-50">
 										{error}
@@ -482,11 +456,11 @@
 								{/if}
 
 								{#if loading && !conversations.length}
-									<div class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 text-sm text-slate-300">
+									<div class="rounded-2xl border border-slate-700/70 bg-slate-950/70 p-4 text-sm text-slate-300">
 										正在加载历史对话...
 									</div>
 								{:else if historyItems.length === 0}
-									<div class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 text-sm text-slate-300">
+									<div class="rounded-2xl border border-slate-700/70 bg-slate-950/70 p-4 text-sm text-slate-300">
 										暂无历史对话
 									</div>
 								{:else}
@@ -496,7 +470,7 @@
 											class={`w-full rounded-2xl border px-4 py-3 text-left transition ${
 												conversation.id === selectedConversation?.id
 													? 'border-sky-300/40 bg-sky-400/10'
-													: 'border-slate-700/70 bg-slate-900/70 hover:border-slate-500/70 hover:bg-slate-800/80'
+													: 'border-slate-700/70 bg-slate-950/70 hover:border-slate-500/70 hover:bg-slate-800/80'
 											}`}
 											onclick={() => openConversation(conversation)}
 										>
@@ -517,66 +491,111 @@
 							</div>
 						</section>
 
-						<div class={`rounded-3xl border border-sky-300/20 bg-slate-900/80 ${sidebarCollapsed ? 'p-2' : 'p-4'}`}>
-							<div class="flex items-center justify-between gap-3">
-								<div>
-									<p class="text-sm uppercase tracking-[0.3em] text-sky-200/60">模型接入</p>
-									<p class="mt-1 text-xs text-slate-300/75">给云端大模型留的环境变量入口</p>
+						<section class="flex min-h-0 flex-col gap-4">
+							<div class="rounded-3xl border border-sky-300/20 bg-slate-900/80 p-4">
+								<div class="flex items-center justify-between gap-3">
+									<div>
+										<p class="text-sm uppercase tracking-[0.3em] text-sky-200/60">模型接入</p>
+										<p class="mt-1 text-xs text-slate-300/75">给云端大模型留的环境变量入口</p>
+									</div>
+									<span class={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.25em] ${
+										modelStatus?.enabled
+											? 'border-emerald-300/30 bg-emerald-400/10 text-emerald-200'
+											: 'border-amber-300/30 bg-amber-400/10 text-amber-100'
+									}`}>
+										{modelStatus?.enabled ? '已启用' : '未启用'}
+									</span>
 								</div>
-								<span class={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.25em] ${
-									modelStatus?.enabled
-										? 'border-emerald-300/30 bg-emerald-400/10 text-emerald-200'
-										: 'border-amber-300/30 bg-amber-400/10 text-amber-100'
-								}`}>
-									{modelStatus?.enabled ? '已启用' : '未启用'}
-								</span>
+								<div class="mt-4 grid gap-2 text-xs text-slate-300/80">
+									<div class="flex items-center justify-between gap-3">
+										<span>MODEL_API_BASE_URL</span>
+										<span>{modelStatus?.variables?.MODEL_API_BASE_URL ? 'yes' : 'no'}</span>
+									</div>
+									<div class="flex items-center justify-between gap-3">
+										<span>MODEL_API_KEY</span>
+										<span>{modelStatus?.variables?.MODEL_API_KEY ? 'yes' : 'no'}</span>
+									</div>
+									<div class="flex items-center justify-between gap-3">
+										<span>MODEL_MODEL</span>
+										<span>{modelStatus?.model ?? 'gpt-4o-mini'}</span>
+									</div>
+									<div class="flex items-center justify-between gap-3">
+										<span>MODEL_PROVIDER</span>
+										<span>{modelStatus?.provider ?? 'openai-compatible'}</span>
+									</div>
+								</div>
 							</div>
-							<div class="mt-4 grid gap-2 text-xs text-slate-300/80">
-								<div class="flex items-center justify-between gap-3">
-									<span>MODEL_API_BASE_URL</span>
-									<span>{modelStatus?.variables?.MODEL_API_BASE_URL ? 'yes' : 'no'}</span>
-								</div>
-								<div class="flex items-center justify-between gap-3">
-									<span>MODEL_API_KEY</span>
-									<span>{modelStatus?.variables?.MODEL_API_KEY ? 'yes' : 'no'}</span>
-								</div>
-								<div class="flex items-center justify-between gap-3">
-									<span>MODEL_MODEL</span>
-									<span>{modelStatus?.model ?? 'gpt-4o-mini'}</span>
-								</div>
-								<div class="flex items-center justify-between gap-3">
-									<span>MODEL_PROVIDER</span>
-									<span>{modelStatus?.provider ?? 'openai-compatible'}</span>
-								</div>
-							</div>
-						</div>
 
-						<div class={`rounded-3xl border border-slate-700/70 bg-slate-900/70 ${sidebarCollapsed ? 'p-2' : 'p-4'}`}>
-							<div class="flex items-center justify-between gap-3 text-sm">
-								<span class="text-slate-300/70">当前登录</span>
-								<span class="truncate text-slate-100">{session?.email ?? '未加载'}</span>
+							<div class="rounded-3xl border border-slate-700/70 bg-slate-900/70 p-4">
+								<div class="flex items-center justify-between gap-3 text-sm">
+									<span class="text-slate-300/70">当前登录</span>
+									<span class="truncate text-slate-100">{session?.email ?? '未加载'}</span>
+								</div>
+								<div class="mt-3 flex items-center justify-between gap-3 text-sm">
+									<span class="text-slate-300/70">当前对话</span>
+									<span class="truncate text-slate-100">{selectedConversation?.title ?? '新对话'}</span>
+								</div>
+								<div class="mt-4 flex gap-3">
+									<button
+										type="button"
+										class="flex-1 rounded-full bg-sky-300 px-4 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-sky-200"
+										onclick={newConversation}
+									>
+										新对话
+									</button>
+									<button
+										type="button"
+										class="rounded-full border border-slate-700/70 bg-slate-900/70 px-4 py-2.5 text-sm font-medium text-slate-100 transition hover:bg-slate-800/80"
+										onclick={logout}
+									>
+										退出
+									</button>
+								</div>
 							</div>
-							<div class="mt-3 flex items-center justify-between gap-3 text-sm">
-								<span class="text-slate-300/70">当前对话</span>
-								<span class="truncate text-slate-100">{selectedConversation?.title ?? '新对话'}</span>
+
+							<div class="flex min-h-0 flex-1 flex-col rounded-3xl border border-slate-700/70 bg-slate-900/70 p-4">
+								<div class="flex items-center justify-between gap-3">
+									<div>
+										<p class="text-sm uppercase tracking-[0.3em] text-sky-200/55">聊天记录</p>
+										<p class="mt-1 text-xs text-slate-300/70">{recentMessages.length} 条最近消息</p>
+									</div>
+									<span class="rounded-full border border-slate-700/80 px-2.5 py-1 text-[10px] uppercase tracking-[0.25em] text-slate-300">
+										{selectedConversation?.moduleSlug ?? 'chat'}
+									</span>
+								</div>
+
+								<div class="scrollbar-hide mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
+									{#if recentMessages.length === 0}
+										<div class="rounded-2xl border border-slate-700/70 bg-slate-950/70 p-4 text-sm text-slate-300">
+											暂无聊天记录
+										</div>
+									{:else}
+										{#each recentMessages as message}
+											<div class={`rounded-2xl border px-3 py-2 text-xs leading-5 ${
+												message.role === 'user'
+													? 'border-slate-200/80 bg-slate-100 text-slate-950'
+													: 'border-slate-700/70 bg-slate-950/80 text-slate-100'
+											}`}>
+												<div class="mb-1 flex items-center justify-between gap-3">
+													<span class="uppercase tracking-[0.25em] opacity-60">
+														{message.role === 'user' ? '你' : '助手'}
+													</span>
+													<span class="opacity-50">
+														{new Date(message.createdAt).toLocaleTimeString('zh-CN', {
+															hour: '2-digit',
+															minute: '2-digit'
+														})}
+													</span>
+												</div>
+												<div class="line-clamp-3 overflow-hidden whitespace-pre-wrap break-words">
+													{@html renderAiMarkdown(message.content)}
+												</div>
+											</div>
+										{/each}
+									{/if}
+								</div>
 							</div>
-							<div class="mt-4 flex gap-3">
-								<button
-									type="button"
-									class="flex-1 rounded-full bg-sky-300 px-4 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-sky-200"
-									onclick={newConversation}
-								>
-									新对话
-								</button>
-								<button
-									type="button"
-									class="rounded-full border border-slate-700/70 bg-slate-900/70 px-4 py-2.5 text-sm font-medium text-slate-100 transition hover:bg-slate-800/80"
-									onclick={logout}
-								>
-									退出
-								</button>
-							</div>
-						</div>
+						</section>
 					</div>
 				{/if}
 			</aside>

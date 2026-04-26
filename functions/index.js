@@ -206,7 +206,12 @@ async function proxyAiEndpoint(request, backendPath) {
 			headers['content-type'] = request.headers.get('content-type') || 'application/json';
 		}
 
-		const timeoutMs = backendPath === '/ai/chat/start' ? 45000 : 20000;
+		const timeoutMs =
+			backendPath === '/ai/chat/start'
+				? 45000
+				: backendPath === '/ai/image/generate'
+					? 110000
+					: 20000;
 		const { response: upstream, data } = await fetchJsonWithTimeout(backendUrl.toString(), {
 			method,
 			headers,
@@ -264,6 +269,14 @@ export default {
 
 		if (url.pathname === '/ai/model-status' && request.method === 'GET') {
 			return proxyAiEndpoint(request, '/ai/model-status');
+		}
+
+		if (url.pathname === '/ai/image-status' && request.method === 'GET') {
+			return proxyAiEndpoint(request, '/ai/image-status');
+		}
+
+		if (url.pathname === '/ai/image/generate' && request.method === 'POST') {
+			return proxyAiEndpoint(request, '/ai/image/generate');
 		}
 
 		if (url.pathname === '/auth/logout' && request.method === 'POST') {

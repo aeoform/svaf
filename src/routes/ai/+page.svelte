@@ -97,6 +97,10 @@
 		chatError = '';
 	}
 
+	function goToImageTool() {
+		void goto('/ai/image/', { replaceState: true, noScroll: true });
+	}
+
 	function logout() {
 		void (async () => {
 			await logoutAi();
@@ -461,6 +465,24 @@
 						</div>
 
 						<div class="mt-4 grid gap-4">
+							<div class="rounded-3xl border border-slate-700/70 bg-slate-950/70 p-3">
+								<div class="grid gap-2">
+									<button
+										type="button"
+										class="rounded-2xl border border-sky-300/40 bg-sky-400/10 px-4 py-3 text-left text-sm text-slate-100"
+									>
+										AI 对话
+									</button>
+									<button
+										type="button"
+										class="rounded-2xl border border-slate-700/70 bg-slate-950/70 px-4 py-3 text-left text-sm text-slate-100 transition hover:border-slate-500/70 hover:bg-slate-800/80"
+										onclick={goToImageTool}
+									>
+										AI 生图
+									</button>
+								</div>
+							</div>
+
 							<div class="rounded-3xl border border-sky-300/20 bg-slate-900/80 p-4">
 								<div class="flex items-center justify-between gap-3">
 									<div>

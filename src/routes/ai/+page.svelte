@@ -44,6 +44,7 @@
 	let streamToken = 0;
 	let loadedConversationId = '';
 	let pendingConversationId = '';
+	let activeStreamConversationId = '';
 
 	function persistSidebarState() {
 		if (!browser) return;
@@ -104,7 +105,11 @@
 			return;
 		}
 
-		if (conversationId === loadedConversationId || conversationId === pendingConversationId) {
+		if (
+			conversationId === loadedConversationId ||
+			conversationId === pendingConversationId ||
+			conversationId === activeStreamConversationId
+		) {
 			return;
 		}
 
@@ -174,6 +179,10 @@
 					if (result.messages?.length) {
 						messages = result.messages;
 					}
+					if (result.conversation) {
+						loadedConversationId = result.conversation.id;
+					}
+					activeStreamConversationId = '';
 					break;
 				}
 
@@ -224,6 +233,9 @@
 			});
 
 			upsertConversation(start.conversation);
+			activeStreamConversationId = start.conversation.id;
+			loadedConversationId = '';
+			pendingConversationId = '';
 			messages = messages.map((message) =>
 				message.id === userMessage.id
 					? {
@@ -273,7 +285,7 @@
 	});
 
 	$effect(() => {
-		if (draftMode || streaming) {
+		if (draftMode || streaming || activeStreamConversationId) {
 			messages = [];
 			return;
 		}

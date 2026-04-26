@@ -36,6 +36,7 @@ export type AiChatStartResponse = {
 export type AiChatStreamResponse = {
 	delta: string;
 	done: boolean;
+	cursor: number;
 	conversation?: AiConversation | null;
 	messages?: AiMessage[];
 };
@@ -43,11 +44,15 @@ export type AiChatStreamResponse = {
 type ApiSuccess<T> = { ok: true } & T;
 type ApiFailure = { ok: false; error?: string };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null;
+}
+
 async function readJson<T>(response: Response, fallbackError: string): Promise<T> {
-	const data = (await response.json().catch(() => null)) as T | ApiFailure | null;
-	if (!response.ok || !data || ('ok' in data && data.ok === false)) {
+	const data: unknown = await response.json().catch(() => null);
+	if (!response.ok || !isRecord(data) || ('ok' in data && data.ok === false)) {
 		const message =
-			data && 'ok' in data && !data.ok && 'error' in data && data.error
+			isRecord(data) && 'ok' in data && !data.ok && 'error' in data && typeof data.error === 'string'
 				? data.error
 				: fallbackError;
 		throw new Error(message);
@@ -103,8 +108,8 @@ export async function startAiChatStream(payload: {
 	return data;
 }
 
-export async function fetchAiChatStream(streamId: string) {
-	const response = await fetch(`/ai/chat/stream/${streamId}`, {
+export async function fetchAiChatStream(streamId: string, cursor = 0) {
+	const response = await fetch(`/ai/chat/stream/${streamId}?cursor=${encodeURIComponent(cursor)}`, {
 		credentials: 'include'
 	});
 

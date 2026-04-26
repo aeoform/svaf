@@ -120,14 +120,14 @@
 
 	async function pollStream(streamId: string, assistantId: string) {
 		const currentStream = ++streamToken;
-		let assembled = '';
+		let cursor = 0;
 		streaming = true;
 
 		try {
 			while (currentStream === streamToken) {
 				let result;
 				try {
-					result = await fetchAiChatStream(streamId);
+					result = await fetchAiChatStream(streamId, cursor);
 				} catch (err) {
 					chatError = err instanceof Error ? err.message : '获取流式响应失败';
 					break;
@@ -136,10 +136,20 @@
 				if (currentStream !== streamToken) return;
 
 				if (result.delta) {
-					assembled += result.delta;
+					cursor = result.cursor ?? cursor + result.delta.length;
 					messages = messages.map((message) =>
-						message.id === assistantId ? { ...message, content: assembled } : message
+						message.id === assistantId
+							? {
+									...message,
+									content:
+										message.content === '正在生成…'
+											? result.delta
+											: `${message.content || ''}${result.delta}`
+								}
+							: message
 					);
+				} else if (typeof result.cursor === 'number') {
+					cursor = result.cursor;
 				}
 
 				if (result.conversation) {
@@ -152,6 +162,10 @@
 						messages = result.messages;
 					}
 					break;
+				}
+
+				if (typeof result.cursor === 'number') {
+					cursor = result.cursor;
 				}
 
 				await new Promise((resolve) => setTimeout(resolve, 140));
@@ -183,7 +197,7 @@
 				id: assistantId,
 				conversationId: selectedConversation?.id ?? 'pending',
 				role: 'assistant',
-				content: '',
+				content: '正在生成…',
 				createdAt: new Date().toISOString()
 			};
 

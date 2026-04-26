@@ -97,6 +97,25 @@
 		].sort((left, right) => new Date(right.lastMessageAt).getTime() - new Date(left.lastMessageAt).getTime());
 	}
 
+	function mergeMessages(serverMessages: AiMessage[], fallbackMessages: AiMessage[]) {
+		if (!serverMessages.length) {
+			return fallbackMessages;
+		}
+
+		if (serverMessages.length >= fallbackMessages.length) {
+			return serverMessages;
+		}
+
+		const byId = new Map(serverMessages.map((message) => [message.id, message]));
+		const merged = [...fallbackMessages];
+
+		for (const message of serverMessages) {
+			byId.set(message.id, message);
+		}
+
+		return merged.map((message) => byId.get(message.id) ?? message);
+	}
+
 	async function refreshConversations() {
 		conversations = await fetchAiConversations();
 	}
@@ -184,7 +203,7 @@
 						try {
 							const finalData = await fetchAiConversationMessages(result.conversation.id);
 							upsertConversation(finalData.conversation);
-							messages = finalData.messages;
+							messages = mergeMessages(finalData.messages, messages);
 							loadedConversationId = finalData.conversation.id;
 						} catch {
 							if (result.messages?.length) {

@@ -226,4 +226,12 @@
 		padding: 0.85rem 1rem;
 		white-space: pre-wrap;
 	}
+
+	.scrollbar-hide {
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+	}
+	.scrollbar-hide::-webkit-scrollbar {
+		display: none;
+	}
 }

@@ -343,6 +343,14 @@
 	}
 
 	onMount(() => {
+		const htmlOverflow = document.documentElement.style.overflow;
+		const bodyOverflow = document.body.style.overflow;
+		const bodyPaddingBottom = document.body.style.paddingBottom;
+
+		document.documentElement.style.overflow = 'hidden';
+		document.body.style.overflow = 'hidden';
+		document.body.style.paddingBottom = '0px';
+
 		if (browser) {
 			sidebarCollapsed = localStorage.getItem('ai-sidebar-collapsed') === '1';
 		}
@@ -364,6 +372,12 @@
 				loading = false;
 			}
 		})();
+
+		return () => {
+			document.documentElement.style.overflow = htmlOverflow;
+			document.body.style.overflow = bodyOverflow;
+			document.body.style.paddingBottom = bodyPaddingBottom;
+		};
 	});
 
 	$effect(() => {
@@ -384,13 +398,13 @@
 	<meta name="description" content="云外拾光的 AI 对话入口。" />
 </svelte:head>
 
-<main class="min-h-[calc(100vh-5rem)] w-full px-0 py-0 text-white">
+<main class="h-[calc(100dvh-5rem)] w-full overflow-hidden px-0 py-0 text-white">
 	<section
 		style={`--sidebar-width:${sidebarCollapsed ? '4.25rem' : '20rem'}`}
-		class="min-h-[calc(100vh-5rem)] overflow-hidden border-y border-slate-800/80 bg-[radial-gradient(circle_at_top_left,rgba(15,118,110,0.22),transparent_30%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_26%),linear-gradient(180deg,rgba(2,6,23,0.97),rgba(15,23,42,0.95))] shadow-2xl shadow-black/35 backdrop-blur"
+		class="h-full overflow-hidden border-y border-slate-800/80 bg-[radial-gradient(circle_at_top_left,rgba(15,118,110,0.22),transparent_30%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_26%),linear-gradient(180deg,rgba(2,6,23,0.97),rgba(15,23,42,0.95))] shadow-2xl shadow-black/35 backdrop-blur"
 	>
-		<div class="grid min-h-[calc(100vh-5rem)] gap-0 lg:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]">
-			<aside class={`border-b border-slate-800/80 bg-slate-950/80 transition-[width] duration-300 ease-out lg:h-[calc(100vh-5rem)] lg:overflow-y-auto lg:border-b-0 lg:border-r ${
+		<div class="grid h-full min-h-0 gap-0 lg:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]">
+			<aside class={`border-b border-slate-800/80 bg-slate-950/80 transition-[width] duration-300 ease-out lg:h-full lg:overflow-y-auto lg:border-b-0 lg:border-r scrollbar-hide ${
 				sidebarCollapsed ? 'p-2' : 'p-3'
 			}`}>
 				<div class="flex items-start justify-between gap-3">
@@ -466,7 +480,7 @@
 							</div>
 						{/if}
 
-						<div class={`mt-3 space-y-2 ${sidebarCollapsed ? 'mt-0' : ''}`}>
+						<div class={`scrollbar-hide mt-3 space-y-2 overflow-y-auto ${sidebarCollapsed ? 'mt-0' : ''}`}>
 							{#if error}
 								<div class="rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-50">
 									{error}
@@ -596,7 +610,7 @@
 							</div>
 						{/if}
 
-						<div class="flex h-full min-h-[18rem] flex-col space-y-4 overflow-y-auto pr-1">
+						<div class="scrollbar-hide flex h-full min-h-[18rem] flex-col space-y-4 overflow-y-auto pr-1">
 							{#if messages.length === 0}
 								<div class="rounded-3xl border border-dashed border-slate-600/70 bg-slate-900/60 p-8 text-center">
 									<p class="text-sm uppercase tracking-[0.3em] text-sky-200/55">AI Chat</p>

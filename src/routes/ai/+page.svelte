@@ -86,99 +86,105 @@
 	/>
 </svelte:head>
 
-<main class="mx-auto min-h-[calc(100vh-5rem)] w-full max-w-6xl px-4 py-8 text-white">
-	<section class="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(86,153,255,0.35),transparent_38%),radial-gradient(circle_at_top_right,rgba(255,179,71,0.22),transparent_34%),rgba(255,255,255,0.05)] shadow-2xl shadow-black/20 backdrop-blur">
-		<div class="grid gap-8 p-6 md:grid-cols-[1.05fr_0.95fr] md:p-8">
-			<div>
+<main class="mx-auto min-h-[calc(100vh-5rem)] w-full max-w-7xl px-4 py-8 text-white">
+	<section class="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(86,153,255,0.28),transparent_36%),radial-gradient(circle_at_top_right,rgba(255,179,71,0.16),transparent_30%),rgba(255,255,255,0.05)] shadow-2xl shadow-black/20 backdrop-blur">
+		<div class="grid min-h-[calc(100vh-9rem)] gap-0 lg:grid-cols-[290px_minmax(0,1fr)]">
+			<aside class="border-b border-white/10 bg-black/20 p-5 lg:border-b-0 lg:border-r">
 				<p class="text-sm uppercase tracking-[0.35em] text-white/45">AI Console</p>
-				<h1 class="mt-4 text-3xl font-semibold md:text-4xl">把 AI 功能拆成独立模块来管理</h1>
-				<p class="mt-4 max-w-2xl text-sm leading-7 text-white/68">
-					这里是主入口。以后你要加聊天、知识库、图片生成、自动化工具，只要在这个页面里加一个模块即可。
+				<h1 class="mt-3 text-2xl font-semibold">功能切换</h1>
+				<p class="mt-3 text-sm leading-7 text-white/60">
+					以后所有 AI 相关能力都从这里分流。新增功能时，只要往侧边栏里加一项。
 				</p>
 
-				<div class="mt-6 flex flex-wrap gap-3">
+				<nav class="mt-6 space-y-2">
+					{#each modules as item}
+						<button
+							type="button"
+							class={`flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+								item.slug === selectedSlug
+									? 'border-white/30 bg-white/12'
+									: 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
+							}`}
+							onclick={() => openModule(item.slug)}
+						>
+							<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/25 text-xs uppercase tracking-[0.25em] text-white/50">
+								{item.slug.slice(0, 2)}
+							</div>
+							<div class="min-w-0">
+								<div class="flex items-center gap-2">
+									<h2 class="truncate text-sm font-medium text-white">{item.name}</h2>
+									<span class="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.25em] text-white/40">
+										{item.tag}
+									</span>
+								</div>
+								<p class="mt-1 line-clamp-2 text-xs leading-5 text-white/55">{item.description}</p>
+							</div>
+						</button>
+					{/each}
+				</nav>
+
+				<div class="mt-6 space-y-3 rounded-3xl border border-white/10 bg-black/20 p-4 text-sm">
+					<div class="flex items-center justify-between gap-3">
+						<span class="text-white/45">当前登录</span>
+						<span class="truncate text-white/80">{session?.email ?? '未加载'}</span>
+					</div>
+					<div class="flex items-center justify-between gap-3">
+						<span class="text-white/45">当前模块</span>
+						<span class="truncate text-white/80">{selectedModule.name}</span>
+					</div>
+				</div>
+
+				<div class="mt-4 flex gap-3">
 					<button
 						type="button"
-						class="rounded-full bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:opacity-90"
+						class="flex-1 rounded-full bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:opacity-90"
 						onclick={() => openModule(selectedModule.slug)}
 					>
 						{selectedModule.action}
 					</button>
 					<button
 						type="button"
-						class="rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+						class="rounded-full border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
 						onclick={logout}
 					>
-						退出登录
+						退出
 					</button>
 				</div>
+			</aside>
 
-				<div class="mt-6 grid gap-3 text-sm text-white/72 sm:grid-cols-2">
-					<div class="rounded-2xl border border-white/10 bg-black/18 p-4">
-						<div class="text-white/45">当前登录</div>
-						<div class="mt-1 break-all">{session?.email ?? '未加载'}</div>
+			<div class="p-6 md:p-8">
+				<div class="flex flex-wrap items-start justify-between gap-4">
+					<div>
+						<p class="text-sm uppercase tracking-[0.35em] text-white/45">Module Detail</p>
+						<h2 class="mt-3 text-3xl font-semibold">{selectedModule.name}</h2>
+						<p class="mt-3 max-w-2xl text-sm leading-7 text-white/65">{selectedModule.description}</p>
 					</div>
-					<div class="rounded-2xl border border-white/10 bg-black/18 p-4">
-						<div class="text-white/45">当前模块</div>
-						<div class="mt-1">{selectedModule.name}</div>
+					<div class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white/45">
+						{selectedModule.tag}
 					</div>
 				</div>
-			</div>
 
-			<div class="rounded-[1.75rem] border border-white/10 bg-black/20 p-4">
-				<div class="grid gap-3 sm:grid-cols-2">
-					{#each modules as item}
-						<button
-							type="button"
-							class={`group rounded-2xl border p-4 text-left transition hover:border-white/25 hover:bg-white/10 ${
-								item.slug === selectedSlug ? 'border-white/35 bg-white/12' : 'border-white/10 bg-white/5'
-							}`}
-							onclick={() => openModule(item.slug)}
-						>
-							<div class="flex items-center justify-between gap-3">
-								<h2 class="text-base font-medium text-white">{item.name}</h2>
-								<span class="rounded-full border border-white/10 px-2.5 py-1 text-[11px] uppercase tracking-[0.28em] text-white/45">
-									{item.tag}
+				<div class="mt-8 grid gap-4 lg:grid-cols-[1fr_0.85fr]">
+					<div class="rounded-3xl border border-white/10 bg-black/20 p-6">
+						<div class="text-sm uppercase tracking-[0.3em] text-white/40">功能能力</div>
+						<div class="mt-5 flex flex-wrap gap-2">
+							{#each selectedModule.highlights as item}
+								<span class="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/65">
+									{item}
 								</span>
-							</div>
-							<p class="mt-3 text-sm leading-6 text-white/60">{item.description}</p>
-						</button>
-					{/each}
-				</div>
-			</div>
-		</div>
-
-		<div class="border-t border-white/10 px-6 py-6 md:px-8">
-			<div class="flex flex-wrap items-center justify-between gap-4">
-				<div>
-					<p class="text-sm uppercase tracking-[0.35em] text-white/35">Module Detail</p>
-					<h2 class="mt-2 text-2xl font-semibold">{selectedModule.name}</h2>
-				</div>
-				<div class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white/45">
-					{selectedModule.tag}
-				</div>
-			</div>
-
-			<div class="mt-6 grid gap-4 lg:grid-cols-[1fr_0.8fr]">
-				<div class="rounded-3xl border border-white/10 bg-black/20 p-6">
-					<p class="text-sm leading-7 text-white/68">{selectedModule.description}</p>
-					<div class="mt-5 flex flex-wrap gap-2">
-						{#each selectedModule.highlights as item}
-							<span class="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/65">
-								{item}
-							</span>
-						{/each}
+							{/each}
+						</div>
 					</div>
-				</div>
 
-				<div class="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6">
-					<div class="text-sm uppercase tracking-[0.3em] text-white/40">后续建议</div>
-					<ul class="mt-4 space-y-3 text-sm leading-7 text-white/68">
-						<li>· 每个功能以后可以独立成 `/ai/&lt;模块名&gt;` 页面。</li>
-						<li>· 这里先做统一切换入口，后面接后端时不需要重做导航。</li>
-						<li>· 模块状态、权限和模型选择可以逐步拆成独立配置。</li>
-					</ul>
-					<p class="mt-5 text-xs uppercase tracking-[0.26em] text-white/35">{selectedModule.note}</p>
+					<div class="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6">
+						<div class="text-sm uppercase tracking-[0.3em] text-white/40">后续建议</div>
+						<ul class="mt-4 space-y-3 text-sm leading-7 text-white/68">
+							<li>· 每个功能以后可以独立成 `/ai/&lt;模块名&gt;` 页面。</li>
+							<li>· 这里先做统一侧边栏，后面接后端时不需要重做导航。</li>
+							<li>· 模块状态、权限和模型选择可以逐步拆成独立配置。</li>
+						</ul>
+						<p class="mt-5 text-xs uppercase tracking-[0.26em] text-white/35">{selectedModule.note}</p>
+					</div>
 				</div>
 			</div>
 		</div>

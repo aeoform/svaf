@@ -4,13 +4,12 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { siteConfig } from '$lib/config/site';
-	import { getAiToken, setAiToken } from '$lib/ai/auth';
+	import { fetchAiSession, loginAi } from '$lib/ai/auth';
 
 	let email = $state('');
 	let password = $state('');
 	let error = $state('');
 	let loading = $state(false);
-	const authBase = import.meta.env.PUBLIC_AI_AUTH_URL || '/auth-api';
 
 	function getRedirectTarget() {
 		const raw = $page.url.searchParams.get('redirect') ?? '/ai/';
@@ -32,19 +31,7 @@
 		loading = true;
 		void (async () => {
 			try {
-				const response = await fetch(`${authBase}/auth/login`, {
-					method: 'POST',
-					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify({ email: cleanEmail, password: cleanPassword })
-				});
-
-				const data = await response.json();
-				if (!response.ok || !data.ok) {
-					error = data.error || '登录失败';
-					return;
-				}
-
-				setAiToken(data.token);
+				await loginAi(cleanEmail, cleanPassword);
 				goto(getRedirectTarget(), { replaceState: true });
 			} catch {
 				error = '无法连接登录服务';
@@ -55,9 +42,11 @@
 	}
 
 	onMount(() => {
-		if (browser && getAiToken()) {
-			goto('/ai/', { replaceState: true });
-		}
+		if (!browser) return;
+		void (async () => {
+			const session = await fetchAiSession();
+			if (session) goto('/ai/', { replaceState: true });
+		})();
 	});
 </script>
 

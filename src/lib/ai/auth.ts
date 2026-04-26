@@ -1,23 +1,44 @@
-import { browser } from '$app/environment';
+export type AiUser = {
+	id: string;
+	email: string;
+	role: string;
+	displayName: string;
+};
 
-const TOKEN_KEY = 'ai-auth-token';
+type AuthResponse =
+	| { ok: true; user: AiUser }
+	| { ok: false; error?: string };
 
-export function getAiToken() {
-	if (!browser) return null;
-	return localStorage.getItem(TOKEN_KEY);
+export async function fetchAiSession() {
+	const response = await fetch('/auth/me', {
+		credentials: 'include'
+	});
+
+	const data = (await response.json().catch(() => null)) as AuthResponse | null;
+	if (!response.ok || !data || !data.ok) return null;
+	return data.user;
 }
 
-export function setAiToken(token: string) {
-	if (!browser) return;
-	localStorage.setItem(TOKEN_KEY, token);
+export async function loginAi(email: string, password: string) {
+	const response = await fetch('/auth/login', {
+		method: 'POST',
+		credentials: 'include',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify({ email, password })
+	});
+
+	const data = (await response.json().catch(() => null)) as AuthResponse | null;
+	if (!response.ok || !data || !data.ok) {
+		const message = data && !data.ok && 'error' in data ? data.error : '登录失败';
+		throw new Error(message);
+	}
+
+	return data.user;
 }
 
-export function clearAiToken() {
-	if (!browser) return;
-	localStorage.removeItem(TOKEN_KEY);
-}
-
-export function createAiToken(email: string) {
-	const cleanEmail = email.trim().toLowerCase();
-	return `ai:${cleanEmail}:${Date.now()}`;
+export async function logoutAi() {
+	await fetch('/auth/logout', {
+		method: 'POST',
+		credentials: 'include'
+	});
 }

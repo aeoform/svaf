@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
-	import { getAiToken } from '$lib/ai/auth';
+	import { fetchAiSession } from '$lib/ai/auth';
 	import { siteConfig } from '$lib/config/site';
 
 	let { children } = $props();
@@ -11,13 +11,24 @@
 	let pathname = $derived($page.url.pathname);
 	let search = $derived($page.url.search);
 	let isLoginRoute = $derived(pathname.includes('/ai/auth/login'));
-	let hasToken = $derived(browser ? !!getAiToken() : false);
+	let hasToken = $state(false);
 
 	onMount(() => {
-		if (!isLoginRoute && !getAiToken()) {
-			const redirect = encodeURIComponent(pathname + search);
-			goto(`/ai/auth/login/?redirect=${redirect}`, { replaceState: true });
-		}
+		void (async () => {
+			if (!browser) return;
+
+			const session = await fetchAiSession();
+			hasToken = !!session;
+
+			if (!isLoginRoute && !session) {
+				const redirect = encodeURIComponent(pathname + search);
+				goto(`/ai/auth/login/?redirect=${redirect}`, { replaceState: true });
+			}
+
+			if (isLoginRoute && session) {
+				goto('/ai/', { replaceState: true });
+			}
+		})();
 	});
 </script>
 

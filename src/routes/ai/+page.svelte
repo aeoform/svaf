@@ -1,14 +1,23 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { clearAiToken, getAiToken } from '$lib/ai/auth';
+	import { onMount } from 'svelte';
+	import { fetchAiSession, logoutAi } from '$lib/ai/auth';
 	import { siteConfig } from '$lib/config/site';
 
-	let token = $derived(getAiToken());
+	let session = $state<Awaited<ReturnType<typeof fetchAiSession>> | null>(null);
 
 	function logout() {
-		clearAiToken();
-		goto('/ai/auth/login/', { replaceState: true });
+		void (async () => {
+			await logoutAi();
+			goto('/ai/auth/login/', { replaceState: true });
+		})();
 	}
+
+	onMount(() => {
+		void (async () => {
+			session = await fetchAiSession();
+		})();
+	});
 </script>
 
 <svelte:head>
@@ -24,8 +33,8 @@
 		</p>
 
 		<div class="mt-8 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
-			<div>登录态：{token ? '已存在' : '不存在'}</div>
-			<div class="mt-1 break-all">Token：{token ?? '无'}</div>
+			<div>登录态：{session ? '已存在' : '不存在'}</div>
+			<div class="mt-1 break-all">用户：{session?.email ?? '无'}</div>
 		</div>
 
 		<button

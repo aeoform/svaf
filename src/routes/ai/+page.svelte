@@ -384,13 +384,15 @@
 	<meta name="description" content="云外拾光的 AI 对话入口。" />
 </svelte:head>
 
-<main class="mx-auto min-h-[calc(100vh-5rem)] w-full max-w-7xl px-4 py-8 text-white">
+<main class="min-h-[calc(100vh-5rem)] w-full px-0 py-0 text-white">
 	<section
-		style={`--sidebar-width:${sidebarCollapsed ? '4.75rem' : '16rem'}`}
-		class="overflow-hidden rounded-[2rem] border border-slate-800/80 bg-[radial-gradient(circle_at_top_left,rgba(15,118,110,0.22),transparent_30%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_26%),linear-gradient(180deg,rgba(2,6,23,0.97),rgba(15,23,42,0.95))] shadow-2xl shadow-black/35 backdrop-blur"
+		style={`--sidebar-width:${sidebarCollapsed ? '4.25rem' : '20rem'}`}
+		class="min-h-[calc(100vh-5rem)] overflow-hidden border-y border-slate-800/80 bg-[radial-gradient(circle_at_top_left,rgba(15,118,110,0.22),transparent_30%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_26%),linear-gradient(180deg,rgba(2,6,23,0.97),rgba(15,23,42,0.95))] shadow-2xl shadow-black/35 backdrop-blur"
 	>
-		<div class="grid min-h-[calc(100vh-9rem)] gap-0 lg:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]">
-			<aside class="border-b border-slate-800/80 bg-slate-950/80 p-3 lg:sticky lg:top-4 lg:h-[calc(100vh-7rem)] lg:overflow-y-auto lg:border-b-0 lg:border-r">
+		<div class="grid min-h-[calc(100vh-5rem)] gap-0 lg:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]">
+			<aside class={`border-b border-slate-800/80 bg-slate-950/80 transition-[width] duration-300 ease-out lg:h-[calc(100vh-5rem)] lg:overflow-y-auto lg:border-b-0 lg:border-r ${
+				sidebarCollapsed ? 'p-2' : 'p-3'
+			}`}>
 				<div class="flex items-start justify-between gap-3">
 					{#if !sidebarCollapsed}
 						<div>
@@ -433,7 +435,9 @@
 						<div class={`mt-3 ${sidebarCollapsed ? 'mt-0' : ''}`}>
 							<button
 								type="button"
-								class="flex w-full items-start gap-3 rounded-2xl border border-sky-300/30 bg-sky-400/10 px-4 py-3 text-left"
+								class={`flex w-full items-start gap-3 rounded-2xl border border-sky-300/30 bg-sky-400/10 text-left transition ${
+									sidebarCollapsed ? 'justify-center px-2 py-3' : 'px-4 py-3'
+								}`}
 								onclick={newConversation}
 							>
 								<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-700/80 bg-slate-950/80 text-xs uppercase tracking-[0.25em] text-slate-200">
@@ -506,7 +510,7 @@
 					</section>
 
 					{#if !sidebarCollapsed}
-						<div class="rounded-3xl border border-sky-300/20 bg-slate-900/80 p-4">
+						<div class={`rounded-3xl border border-sky-300/20 bg-slate-900/80 ${sidebarCollapsed ? 'p-2' : 'p-4'}`}>
 							<div class="flex items-center justify-between gap-3">
 								<div>
 									<p class="text-sm uppercase tracking-[0.3em] text-sky-200/60">模型接入</p>
@@ -540,7 +544,7 @@
 							</div>
 						</div>
 
-						<div class="rounded-3xl border border-slate-700/70 bg-slate-900/70 p-4">
+						<div class={`rounded-3xl border border-slate-700/70 bg-slate-900/70 ${sidebarCollapsed ? 'p-2' : 'p-4'}`}>
 							<div class="flex items-center justify-between gap-3 text-sm">
 								<span class="text-slate-300/70">当前登录</span>
 								<span class="truncate text-slate-100">{session?.email ?? '未加载'}</span>
@@ -570,7 +574,7 @@
 				</div>
 			</aside>
 
-			<div class="flex min-h-0 flex-col p-6 md:p-8">
+			<div class="flex min-h-0 flex-col p-4 md:p-6 lg:p-8">
 				<div class="flex flex-wrap items-start justify-between gap-4">
 					<div>
 						<p class="text-sm uppercase tracking-[0.35em] text-sky-200/55">Chat Panel</p>
@@ -584,15 +588,15 @@
 					</div>
 				</div>
 
-				<div class="mt-8 grid min-h-0 flex-1 gap-4 lg:grid-rows-[1fr_auto]">
-					<div class="min-h-0 rounded-3xl border border-slate-700/70 bg-slate-950/75 p-5">
+				<div class="mt-6 flex min-h-0 flex-1 flex-col gap-4">
+					<div class="min-h-0 flex-1 rounded-3xl border border-slate-700/70 bg-slate-950/75 p-4 md:p-5">
 						{#if loadingMessages}
 							<div class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 text-sm text-slate-300">
 								正在加载对话...
 							</div>
 						{/if}
 
-						<div class="max-h-[calc(100vh-24rem)] space-y-4 overflow-y-auto pr-1">
+						<div class="flex h-full min-h-[18rem] flex-col space-y-4 overflow-y-auto pr-1">
 							{#if messages.length === 0}
 								<div class="rounded-3xl border border-dashed border-slate-600/70 bg-slate-900/60 p-8 text-center">
 									<p class="text-sm uppercase tracking-[0.3em] text-sky-200/55">AI Chat</p>

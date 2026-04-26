@@ -47,5 +47,12 @@
 				博客
 			</Button>
 		</a>
+
+		<a href="/ai/">
+			<Button variant="secondary" class="flex items-center gap-2">
+				<Icon icon="mdi:robot-outline" class="w-5 h-5" />
+				AI工具
+			</Button>
+		</a>
 	</div>
 </div>

@@ -1,5 +1,6 @@
 {
 	"name": "svaf",
+	"entry": "./functions/index.js",
 	"installCommand": "pnpm install",
 	"buildCommand": "pnpm build",
 	"assets": {

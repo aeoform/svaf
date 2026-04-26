@@ -33,7 +33,7 @@ function readCookie(request, name) {
 	return part ? decodeURIComponent(part.slice(prefix.length)) : '';
 }
 
-async function fetchJsonWithTimeout(url, init = {}, timeoutMs = 8000) {
+async function fetchJsonWithTimeout(url, init = {}, timeoutMs = 20000) {
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort('timeout'), timeoutMs);
 

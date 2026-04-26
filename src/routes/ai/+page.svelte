@@ -191,11 +191,7 @@
 								messages = result.messages;
 							}
 						}
-						try {
-							await refreshConversations();
-						} catch {
-							// Keep the current conversation list if refresh fails.
-						}
+						upsertConversation(result.conversation);
 					} else if (result.messages?.length) {
 						messages = result.messages;
 					}

@@ -3,9 +3,10 @@ title: 站点说明
 published: 2025-05-23T16:00:00
 pinned: true
 description: 关于本站的简要说明
+image: img/cover.png
 ---
 
-
+![](img/cover.png)
 # 说明
 
 云外拾光目前只保留两个主要入口：

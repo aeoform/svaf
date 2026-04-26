@@ -2,7 +2,7 @@
 title: 隐私说明
 published: 1998-12-31T19:20:15
 description: 本说明适用于云外拾光（以下简称“本站”）。
-image: img/cover.png
+image:
 draft: false
 lang: ""
 ---

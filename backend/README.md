@@ -1,12 +1,14 @@
-# SVAF Auth Backend
+# SVAF Backend
 
-Minimal login backend for the AI tool entry.
+Backend foundation for the AI tool entry.
 
 ## What it does
 
 - `POST /auth/login`
 - `GET /auth/me`
 - `GET /health`
+
+This is the first module. Future AI-related APIs can live here as well.
 
 ## Environment
 

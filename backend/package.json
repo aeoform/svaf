@@ -1,5 +1,5 @@
 {
-	"name": "svaf-auth-backend",
+	"name": "svaf-backend",
 	"private": true,
 	"type": "module",
 	"scripts": {

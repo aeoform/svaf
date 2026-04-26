@@ -152,6 +152,25 @@
 			upsertConversation(data.conversation);
 			messages = data.messages;
 			loadedConversationId = conversationId;
+
+			if (data.activeStream && !data.activeStream.done) {
+				const assistantId = `stream-assistant-${data.activeStream.streamId}`;
+				const assistantContent = data.activeStream.assistantContent || '正在生成…';
+				if (messages[messages.length - 1]?.role !== 'assistant') {
+					messages = [
+						...messages,
+						{
+							id: assistantId,
+							conversationId,
+							role: 'assistant',
+							content: assistantContent,
+							createdAt: new Date().toISOString()
+						}
+					];
+				}
+				activeStreamConversationId = conversationId;
+				void pollStream(data.activeStream.streamId, assistantId, data.activeStream.cursor || assistantContent.length);
+			}
 		} catch (err) {
 			if (currentLoad !== loadToken) return;
 			chatError = err instanceof Error ? err.message : '无法加载对话';
@@ -164,9 +183,13 @@
 		}
 	}
 
-	async function pollStream(streamId: string, assistantId: string) {
+	async function pollStream(
+		streamId: string,
+		assistantId: string,
+		initialCursor = 0
+	) {
 		const currentStream = ++streamToken;
-		let cursor = 0;
+		let cursor = Math.max(initialCursor, 0);
 		streaming = true;
 
 		try {
@@ -210,7 +233,6 @@
 						}
 						loadedConversationId = result.conversation.id;
 						upsertConversation(result.conversation);
-						void refreshConversations();
 					} else if (result.messages?.length) {
 						messages = result.messages;
 					}

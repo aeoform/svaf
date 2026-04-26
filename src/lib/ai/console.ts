@@ -41,6 +41,19 @@ export type AiChatStreamResponse = {
 	messages?: AiMessage[];
 };
 
+export type AiConversationMessagesResponse = {
+	conversation: AiConversation;
+	messages: AiMessage[];
+	hasMore: boolean;
+	nextOffset: number;
+	activeStream: {
+		streamId: string;
+		assistantContent: string;
+		done: boolean;
+		cursor: number;
+	} | null;
+};
+
 type ApiSuccess<T> = { ok: true } & T;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -81,10 +94,7 @@ export async function fetchAiConversationMessages(conversationId: string) {
 		credentials: 'include'
 	});
 
-	const data = await readJson<ApiSuccess<{ messages: AiMessage[]; conversation: AiConversation }>>(
-		response,
-		'无法获取消息'
-	);
+	const data = await readJson<ApiSuccess<AiConversationMessagesResponse>>(response, '无法获取消息');
 
 	return data;
 }

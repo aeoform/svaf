@@ -245,16 +245,16 @@ export default {
 			return proxyMe(request);
 		}
 
-		if (url.pathname === '/ai/modules' && request.method === 'GET') {
-			return proxyAiData(request, '/ai/modules');
-		}
-
 		if (url.pathname === '/ai/conversations' && request.method === 'GET') {
 			return proxyAiData(request, '/ai/conversations');
 		}
 
-		if (url.pathname === '/ai/chat' && request.method === 'POST') {
-			return proxyAiEndpoint(request, '/ai/chat');
+		if (url.pathname === '/ai/chat/start' && request.method === 'POST') {
+			return proxyAiEndpoint(request, '/ai/chat/start');
+		}
+
+		if (/^\/ai\/chat\/stream\/[^/]+$/.test(url.pathname) && request.method === 'GET') {
+			return proxyAiEndpoint(request, url.pathname);
 		}
 
 		if (/^\/ai\/conversations\/\d+\/messages$/.test(url.pathname) && request.method === 'GET') {

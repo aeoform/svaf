@@ -5,45 +5,43 @@
 	import { onMount } from 'svelte';
 	import { fetchAiSession, logoutAi } from '$lib/ai/auth';
 	import {
+		fetchAiChatStream,
 		fetchAiConversationMessages,
 		fetchAiConversations,
-		fetchAiModules,
 		fetchAiModelStatus,
-		sendAiChatMessage,
+		startAiChatStream,
 		type AiConversation,
 		type AiMessage,
-		type AiModule,
 		type AiModelStatus
 	} from '$lib/ai/console';
 	import { siteConfig } from '$lib/config/site';
 
 	let session = $state<Awaited<ReturnType<typeof fetchAiSession>> | null>(null);
-	let modules = $state<AiModule[]>([]);
 	let conversations = $state<AiConversation[]>([]);
 	let messages = $state<AiMessage[]>([]);
+	let modelStatus = $state<AiModelStatus | null>(null);
 	let loading = $state(true);
 	let loadingMessages = $state(false);
 	let sending = $state(false);
+	let streaming = $state(false);
 	let error = $state('');
 	let chatError = $state('');
-	let modelStatus = $state<AiModelStatus | null>(null);
 	let sidebarCollapsed = $state(false);
 	let composer = $state('');
 	let draftMode = $state(false);
 
-	let selectedToolSlug = $derived($page.url.searchParams.get('tool') ?? '');
 	let selectedConversationId = $derived($page.url.searchParams.get('conversation') ?? '');
-	let selectedModule = $derived(modules.find((item) => item.slug === selectedToolSlug) ?? modules[0] ?? null);
 	let selectedConversation = $derived(
 		draftMode
 			? null
 			: selectedConversationId
 				? conversations.find((item) => item.id === selectedConversationId) ?? null
-				: moduleConversations[0] ?? conversations[0] ?? null
+				: conversations[0] ?? null
 	);
-	let moduleConversations = $derived(
-		selectedModule ? conversations.filter((item) => item.moduleSlug === selectedModule.slug) : conversations
-	);
+	let historyItems = $derived(conversations);
+
+	let loadToken = 0;
+	let streamToken = 0;
 
 	function persistSidebarState() {
 		if (!browser) return;
@@ -70,16 +68,9 @@
 		});
 	}
 
-	function openModule(slug: string) {
-		updateQuery({ tool: slug, conversation: null });
-		messages = [];
-		chatError = '';
-		draftMode = false;
-	}
-
 	function openConversation(conversation: AiConversation) {
 		draftMode = false;
-		updateQuery({ tool: conversation.moduleSlug, conversation: conversation.id });
+		updateQuery({ conversation: conversation.id });
 	}
 
 	function newConversation() {
@@ -100,9 +91,7 @@
 		conversations = [
 			next,
 			...conversations.filter((item) => item.id !== next.id)
-		].sort((left, right) => {
-			return new Date(right.lastMessageAt).getTime() - new Date(left.lastMessageAt).getTime();
-		});
+		].sort((left, right) => new Date(right.lastMessageAt).getTime() - new Date(left.lastMessageAt).getTime());
 	}
 
 	async function loadConversationMessages(conversationId: string) {
@@ -111,18 +100,64 @@
 			return;
 		}
 
+		const currentLoad = ++loadToken;
 		loadingMessages = true;
 		chatError = '';
 
 		try {
 			const data = await fetchAiConversationMessages(conversationId);
+			if (currentLoad !== loadToken) return;
 			upsertConversation(data.conversation);
 			messages = data.messages;
 		} catch (err) {
+			if (currentLoad !== loadToken) return;
 			chatError = err instanceof Error ? err.message : '无法加载对话';
 			messages = [];
 		} finally {
-			loadingMessages = false;
+			if (currentLoad === loadToken) loadingMessages = false;
+		}
+	}
+
+	async function pollStream(streamId: string, assistantId: string) {
+		const currentStream = ++streamToken;
+		let assembled = '';
+		streaming = true;
+
+		try {
+			while (currentStream === streamToken) {
+				let result;
+				try {
+					result = await fetchAiChatStream(streamId);
+				} catch (err) {
+					chatError = err instanceof Error ? err.message : '获取流式响应失败';
+					break;
+				}
+
+				if (currentStream !== streamToken) return;
+
+				if (result.delta) {
+					assembled += result.delta;
+					messages = messages.map((message) =>
+						message.id === assistantId ? { ...message, content: assembled } : message
+					);
+				}
+
+				if (result.conversation) {
+					upsertConversation(result.conversation);
+					draftMode = false;
+				}
+
+				if (result.done) {
+					if (result.messages?.length) {
+						messages = result.messages;
+					}
+					break;
+				}
+
+				await new Promise((resolve) => setTimeout(resolve, 140));
+			}
+		} finally {
+			if (currentStream === streamToken) streaming = false;
 		}
 	}
 
@@ -131,27 +166,54 @@
 
 		const content = composer.trim();
 		if (!content) return;
-		if (!selectedModule) {
-			chatError = '模块尚未加载';
-			return;
-		}
 
 		sending = true;
 		chatError = '';
 
 		try {
-			const result = await sendAiChatMessage({
+			const userMessage: AiMessage = {
+				id: `local-user-${Date.now()}`,
+				conversationId: selectedConversation?.id ?? 'pending',
+				role: 'user',
+				content,
+				createdAt: new Date().toISOString()
+			};
+			const assistantId = `local-assistant-${Date.now()}`;
+			const assistantMessage: AiMessage = {
+				id: assistantId,
+				conversationId: selectedConversation?.id ?? 'pending',
+				role: 'assistant',
+				content: '',
+				createdAt: new Date().toISOString()
+			};
+
+			messages = [...messages, userMessage, assistantMessage];
+			composer = '';
+
+			const start = await startAiChatStream({
 				conversationId: selectedConversation?.id ?? null,
-				moduleSlug: selectedModule.slug,
+				moduleSlug: 'chat',
 				content
 			});
 
-			upsertConversation(result.conversation);
-			messages = result.messages;
-			composer = '';
-			draftMode = false;
-			updateQuery({ tool: result.conversation.moduleSlug, conversation: result.conversation.id });
+			upsertConversation(start.conversation);
+			messages = messages.map((message) =>
+				message.id === userMessage.id
+					? {
+							...message,
+							conversationId: start.conversation.id
+						}
+					: message.id === assistantId
+						? {
+								...message,
+								conversationId: start.conversation.id
+							}
+						: message
+			);
+
+			void pollStream(start.streamId, assistantId);
 		} catch (err) {
+			messages = messages.filter((message) => !message.id.startsWith('local-'));
 			chatError = err instanceof Error ? err.message : '发送失败';
 		} finally {
 			sending = false;
@@ -169,13 +231,12 @@
 			try {
 				loading = true;
 				error = '';
-				const [moduleList, conversationList] = await Promise.all([
-					fetchAiModules(),
-					fetchAiConversations()
+				const [conversationList, status] = await Promise.all([
+					fetchAiConversations(),
+					fetchAiModelStatus()
 				]);
-				modules = moduleList;
 				conversations = conversationList;
-				modelStatus = await fetchAiModelStatus();
+				modelStatus = status;
 			} catch (err) {
 				error = err instanceof Error ? err.message : '加载失败';
 			} finally {
@@ -185,44 +246,51 @@
 	});
 
 	$effect(() => {
-		if (!selectedConversationId) {
+		if (draftMode || streaming) {
 			messages = [];
 			return;
 		}
 
-		void loadConversationMessages(selectedConversationId);
+		if (selectedConversationId) {
+			void loadConversationMessages(selectedConversationId);
+			return;
+		}
+
+		if (conversations[0]) {
+			void loadConversationMessages(conversations[0].id);
+			return;
+		}
+
+		messages = [];
 	});
 </script>
 
 <svelte:head>
-	<title>AI 控制台 · {siteConfig.title}</title>
-	<meta
-		name="description"
-		content="云外拾光的 AI 功能入口，后面会逐步扩展成多个独立能力模块。"
-	/>
+	<title>AI 对话 · {siteConfig.title}</title>
+	<meta name="description" content="云外拾光的 AI 对话入口。" />
 </svelte:head>
 
 <main class="mx-auto min-h-[calc(100vh-5rem)] w-full max-w-7xl px-4 py-8 text-white">
 	<section
-		style={`--sidebar-width:${sidebarCollapsed ? '4.75rem' : '15.75rem'}`}
-		class="overflow-hidden rounded-[2rem] border border-slate-800/80 bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.18),transparent_32%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_26%),linear-gradient(180deg,rgba(2,6,23,0.96),rgba(15,23,42,0.94))] shadow-2xl shadow-black/35 backdrop-blur"
+		style={`--sidebar-width:${sidebarCollapsed ? '4.75rem' : '16rem'}`}
+		class="overflow-hidden rounded-[2rem] border border-slate-800/80 bg-[radial-gradient(circle_at_top_left,rgba(15,118,110,0.22),transparent_30%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_26%),linear-gradient(180deg,rgba(2,6,23,0.97),rgba(15,23,42,0.95))] shadow-2xl shadow-black/35 backdrop-blur"
 	>
 		<div class="grid min-h-[calc(100vh-9rem)] gap-0 lg:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]">
-			<aside class="border-b border-slate-800/80 bg-slate-950/80 p-3 lg:border-b-0 lg:border-r lg:sticky lg:top-4 lg:h-[calc(100vh-7rem)] lg:overflow-y-auto">
+			<aside class="border-b border-slate-800/80 bg-slate-950/80 p-3 lg:sticky lg:top-4 lg:h-[calc(100vh-7rem)] lg:overflow-y-auto lg:border-b-0 lg:border-r">
 				<div class="flex items-start justify-between gap-3">
 					{#if !sidebarCollapsed}
 						<div>
-							<p class="text-sm uppercase tracking-[0.35em] text-sky-200/60">AI Console</p>
-							<h1 class="mt-2 text-xl font-semibold">功能与历史</h1>
-							<p class="mt-2 text-sm leading-6 text-white/60">
-								模块在上，历史在下。后面接更多 AI 能力时，只扩这两块。
+							<p class="text-sm uppercase tracking-[0.35em] text-sky-200/60">AI 对话</p>
+							<h1 class="mt-2 text-xl font-semibold text-slate-100">功能和历史</h1>
+							<p class="mt-2 text-sm leading-6 text-slate-300/80">
+								当前只保留已上线的聊天功能。历史对话在下方，新的能力后面再按需加。
 							</p>
 						</div>
 					{/if}
 
 					<button
 						type="button"
-						class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs uppercase tracking-[0.3em] text-white/60 transition hover:bg-white/10"
+						class="rounded-full border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-xs uppercase tracking-[0.3em] text-slate-200 transition hover:bg-slate-800/80"
 						onclick={toggleSidebar}
 						aria-label={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
 					>
@@ -230,17 +298,17 @@
 					</button>
 				</div>
 
-				<div class={`mt-5 ${sidebarCollapsed ? 'space-y-2' : 'space-y-6'}`}>
+				<div class={`mt-5 ${sidebarCollapsed ? 'space-y-2' : 'space-y-5'}`}>
 					<section>
 						{#if !sidebarCollapsed}
 							<div class="flex items-center justify-between gap-3">
 								<div>
-									<p class="text-sm uppercase tracking-[0.3em] text-white/40">功能列表</p>
-									<p class="mt-1 text-xs text-white/45">后端动态加载</p>
+									<p class="text-sm uppercase tracking-[0.3em] text-sky-200/55">功能列表</p>
+									<p class="mt-1 text-xs text-slate-300/70">目前只保留 AI 对话</p>
 								</div>
 								<button
 									type="button"
-									class="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[11px] uppercase tracking-[0.25em] text-white/55 transition hover:bg-white/10"
+									class="rounded-full border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] uppercase tracking-[0.25em] text-slate-200 transition hover:bg-slate-800/80"
 									onclick={newConversation}
 								>
 									新对话
@@ -248,40 +316,22 @@
 							</div>
 						{/if}
 
-						<div class={`mt-3 space-y-2 ${sidebarCollapsed ? 'mt-0' : ''}`}>
-							{#if loading && !modules.length}
-								<div class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 text-sm text-slate-300">
-									正在加载模块...
+						<div class={`mt-3 ${sidebarCollapsed ? 'mt-0' : ''}`}>
+							<button
+								type="button"
+								class="flex w-full items-start gap-3 rounded-2xl border border-sky-300/30 bg-sky-400/10 px-4 py-3 text-left"
+								onclick={newConversation}
+							>
+								<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-700/80 bg-slate-950/80 text-xs uppercase tracking-[0.25em] text-slate-200">
+									AI
 								</div>
-							{/if}
-
-							{#each modules as item}
-								<button
-									type="button"
-									class={`flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left transition ${
-										item.slug === selectedModule?.slug
-											? 'border-sky-300/40 bg-sky-400/10'
-											: 'border-slate-700/70 bg-slate-900/70 hover:border-slate-500/70 hover:bg-slate-800/80'
-									}`}
-									onclick={() => openModule(item.slug)}
-								>
-									<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-700/80 bg-slate-950/80 text-xs uppercase tracking-[0.25em] text-slate-300">
-										{item.slug.slice(0, 2)}
+								{#if !sidebarCollapsed}
+									<div>
+										<h2 class="text-sm font-medium text-slate-100">AI 对话</h2>
+										<p class="mt-1 text-xs leading-5 text-slate-300/80">基础聊天、历史记录、后续模型接入都从这里开始。</p>
 									</div>
-
-									{#if !sidebarCollapsed}
-										<div class="min-w-0 flex-1">
-											<div class="flex items-center gap-2">
-												<h2 class="truncate text-sm font-medium text-white">{item.name}</h2>
-												<span class="rounded-full border border-slate-700/80 px-2 py-0.5 text-[10px] uppercase tracking-[0.25em] text-slate-300">
-													{item.tag}
-												</span>
-											</div>
-											<p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-300/80">{item.description}</p>
-										</div>
-									{/if}
-								</button>
-							{/each}
+								{/if}
+							</button>
 						</div>
 					</section>
 
@@ -290,10 +340,10 @@
 							<div class="flex items-center justify-between gap-3">
 								<div>
 									<p class="text-sm uppercase tracking-[0.3em] text-sky-200/55">历史对话</p>
-									<p class="mt-1 text-xs text-slate-300/75">{moduleConversations.length} 条记录</p>
+									<p class="mt-1 text-xs text-slate-300/70">{historyItems.length} 条记录</p>
 								</div>
 								<span class="rounded-full border border-slate-700/80 px-2.5 py-1 text-[10px] uppercase tracking-[0.25em] text-slate-300">
-									{selectedModule?.slug ?? 'all'}
+									chat
 								</span>
 							</div>
 						{/if}
@@ -309,12 +359,12 @@
 								<div class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 text-sm text-slate-300">
 									正在加载历史对话...
 								</div>
-							{:else if moduleConversations.length === 0}
+							{:else if historyItems.length === 0}
 								<div class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 text-sm text-slate-300">
 									暂无历史对话
 								</div>
 							{:else}
-								{#each moduleConversations as conversation}
+								{#each historyItems as conversation}
 									<button
 										type="button"
 										class={`w-full rounded-2xl border px-4 py-3 text-left transition ${
@@ -332,7 +382,7 @@
 												<p class="mt-1 truncate text-xs text-slate-300/75">{conversation.summary || '暂无摘要'}</p>
 											</div>
 											<span class="shrink-0 rounded-full border border-slate-700/80 px-2 py-1 text-[10px] uppercase tracking-[0.25em] text-slate-300">
-												{conversation.moduleSlug}
+												对话
 											</span>
 										</div>
 									</button>
@@ -342,22 +392,11 @@
 					</section>
 
 					{#if !sidebarCollapsed}
-						<div class="mt-5 rounded-3xl border border-slate-700/70 bg-slate-900/70 p-4">
-							<div class="flex items-center justify-between gap-3 text-sm">
-								<span class="text-slate-300/70">当前登录</span>
-								<span class="truncate text-slate-100">{session?.email ?? '未加载'}</span>
-							</div>
-							<div class="mt-3 flex items-center justify-between gap-3 text-sm">
-								<span class="text-slate-300/70">当前模块</span>
-								<span class="truncate text-slate-100">{selectedModule?.name ?? '暂无'}</span>
-							</div>
-						</div>
-
-						<div class="mt-5 rounded-3xl border border-sky-300/20 bg-slate-900/80 p-4">
+						<div class="rounded-3xl border border-sky-300/20 bg-slate-900/80 p-4">
 							<div class="flex items-center justify-between gap-3">
 								<div>
 									<p class="text-sm uppercase tracking-[0.3em] text-sky-200/60">模型接入</p>
-									<p class="mt-1 text-xs text-slate-300/75">通过环境变量切到云端大模型</p>
+									<p class="mt-1 text-xs text-slate-300/75">给云端大模型留的环境变量入口</p>
 								</div>
 								<span class={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.25em] ${
 									modelStatus?.enabled
@@ -386,6 +425,33 @@
 								</div>
 							</div>
 						</div>
+
+						<div class="rounded-3xl border border-slate-700/70 bg-slate-900/70 p-4">
+							<div class="flex items-center justify-between gap-3 text-sm">
+								<span class="text-slate-300/70">当前登录</span>
+								<span class="truncate text-slate-100">{session?.email ?? '未加载'}</span>
+							</div>
+							<div class="mt-3 flex items-center justify-between gap-3 text-sm">
+								<span class="text-slate-300/70">当前对话</span>
+								<span class="truncate text-slate-100">{selectedConversation?.title ?? '新对话'}</span>
+							</div>
+							<div class="mt-4 flex gap-3">
+								<button
+									type="button"
+									class="flex-1 rounded-full bg-sky-300 px-4 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-sky-200"
+									onclick={newConversation}
+								>
+									新对话
+								</button>
+								<button
+									type="button"
+									class="rounded-full border border-slate-700/70 bg-slate-900/70 px-4 py-2.5 text-sm font-medium text-slate-100 transition hover:bg-slate-800/80"
+									onclick={logout}
+								>
+									退出
+								</button>
+							</div>
+						</div>
 					{/if}
 				</div>
 			</aside>
@@ -394,28 +460,18 @@
 				<div class="flex flex-wrap items-start justify-between gap-4">
 					<div>
 						<p class="text-sm uppercase tracking-[0.35em] text-sky-200/55">Chat Panel</p>
-						<h2 class="mt-3 text-3xl font-semibold">
-							{selectedModule?.name ?? 'AI 聊天'}
-						</h2>
+						<h2 class="mt-3 text-3xl font-semibold text-slate-100">AI 聊天</h2>
 						<p class="mt-3 max-w-2xl text-sm leading-7 text-slate-300/85">
-							右侧先留给聊天。当前是基础版对话，后面可以继续接真实模型、流式输出和工具调用。
+							右侧只保留聊天。流式输出会通过多次轮询请求拿差异，后面接真实模型时也能直接沿用。
 						</p>
 					</div>
-					<div class="flex items-center gap-3">
-						{#if selectedConversation}
-							<div class="rounded-full border border-slate-700/80 bg-slate-900/70 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-300">
-								{selectedConversation.moduleSlug} · {selectedConversation.title || '未命名对话'}
-							</div>
-						{:else}
-							<div class="rounded-full border border-slate-700/80 bg-slate-900/70 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-300">
-								新对话
-							</div>
-						{/if}
+					<div class="rounded-full border border-slate-700/80 bg-slate-900/70 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-300">
+						{selectedConversation?.moduleSlug ?? 'chat'}
 					</div>
 				</div>
 
 				<div class="mt-8 grid min-h-0 flex-1 gap-4 lg:grid-rows-[1fr_auto]">
-					<div class="min-h-0 rounded-3xl border border-slate-700/70 bg-slate-950/70 p-5">
+					<div class="min-h-0 rounded-3xl border border-slate-700/70 bg-slate-950/75 p-5">
 						{#if loadingMessages}
 							<div class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 text-sm text-slate-300">
 								正在加载对话...
@@ -428,7 +484,7 @@
 									<p class="text-sm uppercase tracking-[0.3em] text-sky-200/55">AI Chat</p>
 									<h3 class="mt-3 text-xl font-semibold text-slate-100">从这里开始聊天</h3>
 									<p class="mt-3 text-sm leading-7 text-slate-300/80">
-										先选左侧模块，或者直接在下面输入一段消息，系统会自动建立会话。
+										直接输入消息即可，系统会自动创建新会话并开始流式返回差异。
 									</p>
 								</div>
 							{:else}
@@ -452,20 +508,20 @@
 						</div>
 					</div>
 
-					<form onsubmit={submitMessage} class="rounded-3xl border border-slate-700/70 bg-slate-950/70 p-4">
+					<form onsubmit={submitMessage} class="rounded-3xl border border-slate-700/70 bg-slate-950/75 p-4">
 						<div class="flex items-start gap-3">
 							<textarea
 								class="min-h-[5.5rem] flex-1 resize-none rounded-2xl border border-slate-700/70 bg-slate-900/80 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-sky-300/40"
 								placeholder={selectedConversation ? '继续输入这段对话' : '输入消息，系统会自动创建新会话'}
 								bind:value={composer}
-								disabled={sending}
+								disabled={sending || streaming}
 							></textarea>
 							<button
 								type="submit"
 								class="rounded-full bg-sky-300 px-5 py-3 text-sm font-medium text-slate-950 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
-								disabled={sending}
+								disabled={sending || streaming}
 							>
-								{sending ? '发送中...' : '发送'}
+								{sending || streaming ? '发送中...' : '发送'}
 							</button>
 						</div>
 
@@ -474,7 +530,7 @@
 						{/if}
 
 						<div class="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs uppercase tracking-[0.25em] text-slate-400">
-							<span>模块：{selectedModule?.name ?? '未加载'}</span>
+							<span>流式：轮询差异</span>
 							<button
 								type="button"
 								class="rounded-full border border-slate-700/70 bg-slate-900/70 px-3 py-2 transition hover:bg-slate-800/80"

@@ -1,14 +1,3 @@
-export type AiModule = {
-	slug: string;
-	name: string;
-	tag: string;
-	description: string;
-	action: string;
-	note: string;
-	sortOrder: number;
-	isActive: boolean;
-};
-
 export type AiConversation = {
 	id: string;
 	userId: string;
@@ -38,6 +27,19 @@ export type AiModelStatus = {
 	variables: Record<string, boolean>;
 };
 
+export type AiChatStartResponse = {
+	streamId: string;
+	conversation: AiConversation;
+	userMessage: AiMessage;
+};
+
+export type AiChatStreamResponse = {
+	delta: string;
+	done: boolean;
+	conversation?: AiConversation | null;
+	messages?: AiMessage[];
+};
+
 type ApiSuccess<T> = { ok: true } & T;
 type ApiFailure = { ok: false; error?: string };
 
@@ -52,15 +54,6 @@ async function readJson<T>(response: Response, fallbackError: string): Promise<T
 	}
 
 	return data as T;
-}
-
-export async function fetchAiModules() {
-	const response = await fetch('/ai/modules', {
-		credentials: 'include'
-	});
-
-	const data = await readJson<ApiSuccess<{ modules: AiModule[] }>>(response, '无法获取功能列表');
-	return data.modules;
 }
 
 export async function fetchAiConversations(moduleSlug = '') {
@@ -90,12 +83,12 @@ export async function fetchAiConversationMessages(conversationId: string) {
 	return data;
 }
 
-export async function sendAiChatMessage(payload: {
+export async function startAiChatStream(payload: {
 	conversationId?: string | null;
 	moduleSlug?: string;
 	content: string;
 }) {
-	const response = await fetch('/ai/chat', {
+	const response = await fetch('/ai/chat/start', {
 		method: 'POST',
 		credentials: 'include',
 		headers: { 'content-type': 'application/json' },
@@ -106,9 +99,16 @@ export async function sendAiChatMessage(payload: {
 		})
 	});
 
-	const data = await readJson<
-		ApiSuccess<{ messages: AiMessage[]; conversation: AiConversation; reply: string }>
-	>(response, '发送消息失败');
+	const data = await readJson<ApiSuccess<AiChatStartResponse>>(response, '无法开始对话');
+	return data;
+}
+
+export async function fetchAiChatStream(streamId: string) {
+	const response = await fetch(`/ai/chat/stream/${streamId}`, {
+		credentials: 'include'
+	});
+
+	const data = await readJson<ApiSuccess<AiChatStreamResponse>>(response, '无法获取流式响应');
 	return data;
 }
 

@@ -1,4 +1,4 @@
-const AUTH_API_ORIGIN = process.env.AUTH_API_ORIGIN || 'http://127.0.0.1:8787';
+const AUTH_API_ORIGIN = process.env.AUTH_API_ORIGIN || 'https://ai.aeoform.com';
 
 function json(body, init = {}) {
 	return new Response(JSON.stringify(body), {
@@ -24,6 +24,17 @@ function readCookie(request, name) {
 }
 
 async function proxyLogin(request) {
+	const requestOrigin = new URL(request.url).origin;
+	if (AUTH_API_ORIGIN === requestOrigin) {
+		return json(
+			{
+				ok: false,
+				error: 'auth backend misconfigured: AUTH_API_ORIGIN points to the same origin'
+			},
+			{ status: 500 }
+		);
+	}
+
 	const body = await request.text();
 	const upstream = await fetch(`${AUTH_API_ORIGIN}/auth/login`, {
 		method: 'POST',
@@ -47,6 +58,17 @@ async function proxyLogin(request) {
 }
 
 async function proxyMe(request) {
+	const requestOrigin = new URL(request.url).origin;
+	if (AUTH_API_ORIGIN === requestOrigin) {
+		return json(
+			{
+				ok: false,
+				error: 'auth backend misconfigured: AUTH_API_ORIGIN points to the same origin'
+			},
+			{ status: 500 }
+		);
+	}
+
 	const token = readCookie(request, 'ai-session');
 	if (!token) {
 		return json({ ok: false, error: 'missing token' }, { status: 401 });

@@ -41,13 +41,7 @@ export type AiChatStreamResponse = {
 	messages?: AiMessage[];
 };
 
-export type AiListResponse<T> = {
-	hasMore: boolean;
-	nextOffset: number;
-} & T;
-
 type ApiSuccess<T> = { ok: true } & T;
-type ApiFailure = { ok: false; error?: string };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null;
@@ -67,65 +61,32 @@ async function readJson<T>(response: Response, fallbackError: string): Promise<T
 }
 
 export async function fetchAiConversations(moduleSlug = '') {
-	const conversations: AiConversation[] = [];
-	let offset = 0;
+	const params = new URLSearchParams();
+	if (moduleSlug) params.set('module', moduleSlug);
+	params.set('limit', '10000');
 
-	while (true) {
-		const params = new URLSearchParams();
-		if (moduleSlug) params.set('module', moduleSlug);
-		params.set('limit', '200');
-		params.set('offset', String(offset));
-		const query = params.toString() ? `?${params.toString()}` : '';
+	const response = await fetch(`/ai/conversations?${params.toString()}`, {
+		credentials: 'include'
+	});
 
-		const response = await fetch(`/ai/conversations${query}`, {
-			credentials: 'include'
-		});
-
-		const data = await readJson<
-			ApiSuccess<AiListResponse<{ conversations: AiConversation[] }>>
-		>(response, '无法获取历史对话');
-
-		conversations.push(...data.conversations);
-		if (!data.hasMore || !data.conversations.length) break;
-		offset = data.nextOffset;
-	}
-
-	return conversations;
+	const data = await readJson<ApiSuccess<{ conversations: AiConversation[] }>>(
+		response,
+		'无法获取历史对话'
+	);
+	return data.conversations;
 }
 
 export async function fetchAiConversationMessages(conversationId: string) {
-	const messages: AiMessage[] = [];
-	let conversation: AiConversation | null = null;
-	let offset = 0;
+	const response = await fetch(`/ai/conversations/${conversationId}/messages?limit=20000`, {
+		credentials: 'include'
+	});
 
-	while (true) {
-		const response = await fetch(
-			`/ai/conversations/${conversationId}/messages?limit=400&offset=${offset}`,
-			{
-				credentials: 'include'
-			}
-		);
+	const data = await readJson<ApiSuccess<{ messages: AiMessage[]; conversation: AiConversation }>>(
+		response,
+		'无法获取消息'
+	);
 
-		const data = await readJson<
-			ApiSuccess<
-				AiListResponse<{ messages: AiMessage[]; conversation: AiConversation }>
-			>
-		>(response, '无法获取消息');
-
-		conversation = data.conversation;
-		messages.push(...data.messages);
-		if (!data.hasMore || !data.messages.length) break;
-		offset = data.nextOffset;
-	}
-
-	if (!conversation) {
-		throw new Error('无法获取消息');
-	}
-
-	return {
-		conversation,
-		messages
-	};
+	return data;
 }
 
 export async function startAiChatStream(payload: {

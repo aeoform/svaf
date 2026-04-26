@@ -117,7 +117,11 @@
 	}
 
 	async function refreshConversations() {
-		conversations = await fetchAiConversations();
+		try {
+			conversations = await fetchAiConversations();
+		} catch {
+			// Keep the current list if a refresh fails.
+		}
 	}
 
 	async function loadConversationMessages(conversationId: string) {
@@ -200,17 +204,12 @@
 
 				if (result.done) {
 					if (result.conversation) {
-						try {
-							const finalData = await fetchAiConversationMessages(result.conversation.id);
-							upsertConversation(finalData.conversation);
-							messages = mergeMessages(finalData.messages, messages);
-							loadedConversationId = finalData.conversation.id;
-						} catch {
-							if (result.messages?.length) {
-								messages = result.messages;
-							}
+						if (result.messages?.length) {
+							messages = mergeMessages(result.messages, messages);
 						}
+						loadedConversationId = result.conversation.id;
 						upsertConversation(result.conversation);
+						void refreshConversations();
 					} else if (result.messages?.length) {
 						messages = result.messages;
 					}
@@ -265,6 +264,8 @@
 			});
 
 			upsertConversation(start.conversation);
+			draftMode = false;
+			updateQuery({ conversation: start.conversation.id });
 			activeStreamConversationId = start.conversation.id;
 			loadedConversationId = '';
 			pendingConversationId = '';

@@ -236,6 +236,7 @@
 
 		sending = true;
 		chatError = '';
+		activeStreamConversationId = '__starting__';
 
 		try {
 			const userMessage: AiMessage = {
@@ -265,8 +266,8 @@
 
 			upsertConversation(start.conversation);
 			draftMode = false;
-			updateQuery({ conversation: start.conversation.id });
 			activeStreamConversationId = start.conversation.id;
+			updateQuery({ conversation: start.conversation.id });
 			loadedConversationId = '';
 			pendingConversationId = '';
 			messages = messages.map((message) =>
@@ -287,6 +288,7 @@
 		} catch (err) {
 			messages = messages.filter((message) => !message.id.startsWith('local-'));
 			chatError = err instanceof Error ? err.message : '发送失败';
+			activeStreamConversationId = '';
 		} finally {
 			sending = false;
 		}

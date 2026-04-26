@@ -285,10 +285,7 @@
 	});
 
 	$effect(() => {
-		if (draftMode || streaming || activeStreamConversationId) {
-			messages = [];
-			return;
-		}
+		if (draftMode || streaming || activeStreamConversationId) return;
 
 		const targetConversationId = selectedConversationId || conversations[0]?.id || '';
 		if (!targetConversationId) {

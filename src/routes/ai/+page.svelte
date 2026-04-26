@@ -42,6 +42,8 @@
 
 	let loadToken = 0;
 	let streamToken = 0;
+	let loadedConversationId = '';
+	let pendingConversationId = '';
 
 	function persistSidebarState() {
 		if (!browser) return;
@@ -97,10 +99,17 @@
 	async function loadConversationMessages(conversationId: string) {
 		if (!conversationId) {
 			messages = [];
+			loadedConversationId = '';
+			pendingConversationId = '';
+			return;
+		}
+
+		if (conversationId === loadedConversationId || conversationId === pendingConversationId) {
 			return;
 		}
 
 		const currentLoad = ++loadToken;
+		pendingConversationId = conversationId;
 		loadingMessages = true;
 		chatError = '';
 
@@ -109,11 +118,15 @@
 			if (currentLoad !== loadToken) return;
 			upsertConversation(data.conversation);
 			messages = data.messages;
+			loadedConversationId = conversationId;
 		} catch (err) {
 			if (currentLoad !== loadToken) return;
 			chatError = err instanceof Error ? err.message : '无法加载对话';
 			messages = [];
 		} finally {
+			if (currentLoad === loadToken) {
+				pendingConversationId = '';
+			}
 			if (currentLoad === loadToken) loadingMessages = false;
 		}
 	}
@@ -265,17 +278,13 @@
 			return;
 		}
 
-		if (selectedConversationId) {
-			void loadConversationMessages(selectedConversationId);
+		const targetConversationId = selectedConversationId || conversations[0]?.id || '';
+		if (!targetConversationId) {
+			messages = [];
 			return;
 		}
 
-		if (conversations[0]) {
-			void loadConversationMessages(conversations[0].id);
-			return;
-		}
-
-		messages = [];
+		void loadConversationMessages(targetConversationId);
 	});
 </script>
 

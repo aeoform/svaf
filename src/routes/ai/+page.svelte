@@ -557,7 +557,7 @@
 								{#each messages as message}
 									<div class={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
 										<div
-											class={`max-w-[78%] rounded-[1.5rem] border px-4 py-3 text-sm leading-7 ${
+											class={`max-w-[78%] rounded-[1.5rem] border px-4 py-3 text-sm leading-7 whitespace-pre-wrap break-words ${
 												message.role === 'user'
 													? 'border-slate-200/80 bg-slate-100 text-slate-950'
 													: 'border-slate-700/70 bg-slate-900/85 text-slate-100'

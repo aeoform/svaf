@@ -400,14 +400,14 @@
 
 <main class="h-[calc(100dvh-5rem)] w-full overflow-hidden px-0 py-0 text-white">
 	<section
-		style={`--sidebar-width:${sidebarCollapsed ? '4.25rem' : '20rem'}`}
+		style={`--sidebar-width:${sidebarCollapsed ? '3.25rem' : '20rem'}`}
 		class="h-full overflow-hidden border-y border-slate-800/80 bg-[radial-gradient(circle_at_top_left,rgba(15,118,110,0.22),transparent_30%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_26%),linear-gradient(180deg,rgba(2,6,23,0.97),rgba(15,23,42,0.95))] shadow-2xl shadow-black/35 backdrop-blur"
 	>
 		<div class="grid h-full min-h-0 gap-0 lg:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]">
 			<aside class={`border-b border-slate-800/80 bg-slate-950/80 transition-[width] duration-300 ease-out lg:h-full lg:overflow-y-auto lg:border-b-0 lg:border-r scrollbar-hide ${
-				sidebarCollapsed ? 'p-2' : 'p-3'
+				sidebarCollapsed ? 'p-1' : 'p-3'
 			}`}>
-				<div class="flex items-start justify-between gap-3">
+				<div class={`flex items-start ${sidebarCollapsed ? 'justify-center' : 'justify-between gap-3'}`}>
 					{#if !sidebarCollapsed}
 						<div>
 							<p class="text-sm uppercase tracking-[0.35em] text-sky-200/60">AI 对话</p>
@@ -420,7 +420,9 @@
 
 					<button
 						type="button"
-						class="rounded-full border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-xs uppercase tracking-[0.3em] text-slate-200 transition hover:bg-slate-800/80"
+						class={`rounded-full border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-xs uppercase tracking-[0.3em] text-slate-200 transition hover:bg-slate-800/80 ${
+							sidebarCollapsed ? 'mx-auto' : ''
+						}`}
 						onclick={toggleSidebar}
 						aria-label={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
 					>
@@ -428,9 +430,9 @@
 					</button>
 				</div>
 
-				<div class={`mt-5 ${sidebarCollapsed ? 'space-y-2' : 'space-y-5'}`}>
-					<section>
-						{#if !sidebarCollapsed}
+				{#if !sidebarCollapsed}
+					<div class="mt-5 space-y-5">
+						<section>
 							<div class="flex items-center justify-between gap-3">
 								<div>
 									<p class="text-sm uppercase tracking-[0.3em] text-sky-200/55">功能列表</p>
@@ -444,31 +446,24 @@
 									新对话
 								</button>
 							</div>
-						{/if}
-
-						<div class={`mt-3 ${sidebarCollapsed ? 'mt-0' : ''}`}>
-							<button
-								type="button"
-								class={`flex w-full items-start gap-3 rounded-2xl border border-sky-300/30 bg-sky-400/10 text-left transition ${
-									sidebarCollapsed ? 'justify-center px-2 py-3' : 'px-4 py-3'
-								}`}
-								onclick={newConversation}
-							>
-								<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-700/80 bg-slate-950/80 text-xs uppercase tracking-[0.25em] text-slate-200">
-									AI
-								</div>
-								{#if !sidebarCollapsed}
+							<div class="mt-3">
+								<button
+									type="button"
+									class="flex w-full items-start gap-3 rounded-2xl border border-sky-300/30 bg-sky-400/10 px-4 py-3 text-left transition"
+									onclick={newConversation}
+								>
+									<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-700/80 bg-slate-950/80 text-xs uppercase tracking-[0.25em] text-slate-200">
+										AI
+									</div>
 									<div>
 										<h2 class="text-sm font-medium text-slate-100">AI 对话</h2>
 										<p class="mt-1 text-xs leading-5 text-slate-300/80">基础聊天、历史记录、后续模型接入都从这里开始。</p>
 									</div>
-								{/if}
-							</button>
-						</div>
-					</section>
+								</button>
+							</div>
+						</section>
 
-					<section>
-						{#if !sidebarCollapsed}
+						<section>
 							<div class="flex items-center justify-between gap-3">
 								<div>
 									<p class="text-sm uppercase tracking-[0.3em] text-sky-200/55">历史对话</p>
@@ -478,52 +473,50 @@
 									chat
 								</span>
 							</div>
-						{/if}
 
-						<div class={`scrollbar-hide mt-3 space-y-2 overflow-y-auto ${sidebarCollapsed ? 'mt-0' : ''}`}>
-							{#if error}
-								<div class="rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-50">
-									{error}
-								</div>
-							{/if}
+							<div class="scrollbar-hide mt-3 space-y-2 overflow-y-auto">
+								{#if error}
+									<div class="rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-50">
+										{error}
+									</div>
+								{/if}
 
-							{#if loading && !conversations.length}
-								<div class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 text-sm text-slate-300">
-									正在加载历史对话...
-								</div>
-							{:else if historyItems.length === 0}
-								<div class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 text-sm text-slate-300">
-									暂无历史对话
-								</div>
-							{:else}
-								{#each historyItems as conversation}
-									<button
-										type="button"
-										class={`w-full rounded-2xl border px-4 py-3 text-left transition ${
-											conversation.id === selectedConversation?.id
-												? 'border-sky-300/40 bg-sky-400/10'
-												: 'border-slate-700/70 bg-slate-900/70 hover:border-slate-500/70 hover:bg-slate-800/80'
-										}`}
-										onclick={() => openConversation(conversation)}
-									>
-										<div class="flex items-center justify-between gap-3">
-											<div class="min-w-0">
-												<p class="truncate text-sm font-medium text-slate-100">
-													{conversation.title || '未命名对话'}
-												</p>
-												<p class="mt-1 truncate text-xs text-slate-300/75">{conversation.summary || '暂无摘要'}</p>
+								{#if loading && !conversations.length}
+									<div class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 text-sm text-slate-300">
+										正在加载历史对话...
+									</div>
+								{:else if historyItems.length === 0}
+									<div class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 text-sm text-slate-300">
+										暂无历史对话
+									</div>
+								{:else}
+									{#each historyItems as conversation}
+										<button
+											type="button"
+											class={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+												conversation.id === selectedConversation?.id
+													? 'border-sky-300/40 bg-sky-400/10'
+													: 'border-slate-700/70 bg-slate-900/70 hover:border-slate-500/70 hover:bg-slate-800/80'
+											}`}
+											onclick={() => openConversation(conversation)}
+										>
+											<div class="flex items-center justify-between gap-3">
+												<div class="min-w-0">
+													<p class="truncate text-sm font-medium text-slate-100">
+														{conversation.title || '未命名对话'}
+													</p>
+													<p class="mt-1 truncate text-xs text-slate-300/75">{conversation.summary || '暂无摘要'}</p>
+												</div>
+												<span class="shrink-0 rounded-full border border-slate-700/80 px-2 py-1 text-[10px] uppercase tracking-[0.25em] text-slate-300">
+													对话
+												</span>
 											</div>
-											<span class="shrink-0 rounded-full border border-slate-700/80 px-2 py-1 text-[10px] uppercase tracking-[0.25em] text-slate-300">
-												对话
-											</span>
-										</div>
-									</button>
-								{/each}
-							{/if}
-						</div>
-					</section>
+										</button>
+									{/each}
+								{/if}
+							</div>
+						</section>
 
-					{#if !sidebarCollapsed}
 						<div class={`rounded-3xl border border-sky-300/20 bg-slate-900/80 ${sidebarCollapsed ? 'p-2' : 'p-4'}`}>
 							<div class="flex items-center justify-between gap-3">
 								<div>
@@ -584,8 +577,8 @@
 								</button>
 							</div>
 						</div>
-					{/if}
-				</div>
+					</div>
+				{/if}
 			</aside>
 
 			<div class="flex min-h-0 flex-col p-4 md:p-6 lg:p-8">

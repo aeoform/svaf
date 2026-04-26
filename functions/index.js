@@ -134,6 +134,47 @@ async function proxyMe(request) {
 	}
 }
 
+async function proxyAiData(request, backendPath) {
+	const requestOrigin = new URL(request.url).origin;
+	if (AUTH_API_ORIGIN === requestOrigin) {
+		return json(
+			{
+				ok: false,
+				error: 'auth backend misconfigured: AUTH_API_ORIGIN points to the same origin'
+			},
+			{ status: 500 }
+		);
+	}
+
+	const token = readCookie(request, 'ai-session');
+	if (!token) {
+		return json({ ok: false, error: 'missing token' }, { status: 401 });
+	}
+
+	try {
+		const backendUrl = new URL(backendPath, AUTH_API_ORIGIN);
+		backendUrl.search = new URL(request.url).search;
+
+		const { response: upstream, data } = await fetchJsonWithTimeout(backendUrl.toString(), {
+			headers: {
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!upstream.ok || !data || !data.ok) {
+			return json(data || { ok: false, error: 'request failed' }, { status: upstream.status || 502 });
+		}
+
+		return json(data);
+	} catch (error) {
+		const message =
+			error instanceof Error && error.name === 'AbortError'
+				? 'auth backend timeout'
+				: 'auth backend unreachable';
+		return json({ ok: false, error: message }, { status: 502 });
+	}
+}
+
 function logout(request) {
 	const headers = new Headers({ 'content-type': 'application/json; charset=utf-8' });
 	const attrs = cookieAttrs(request).replace('HttpOnly; ', '');
@@ -151,6 +192,14 @@ export default {
 
 		if (url.pathname === '/auth/me' && request.method === 'GET') {
 			return proxyMe(request);
+		}
+
+		if (url.pathname === '/ai/modules' && request.method === 'GET') {
+			return proxyAiData(request, '/ai/modules');
+		}
+
+		if (url.pathname === '/ai/conversations' && request.method === 'GET') {
+			return proxyAiData(request, '/ai/conversations');
 		}
 
 		if (url.pathname === '/auth/logout' && request.method === 'POST') {

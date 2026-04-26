@@ -97,6 +97,10 @@
 		].sort((left, right) => new Date(right.lastMessageAt).getTime() - new Date(left.lastMessageAt).getTime());
 	}
 
+	async function refreshConversations() {
+		conversations = await fetchAiConversations();
+	}
+
 	async function loadConversationMessages(conversationId: string) {
 		if (!conversationId) {
 			messages = [];
@@ -176,11 +180,24 @@
 				}
 
 				if (result.done) {
-					if (result.messages?.length) {
-						messages = result.messages;
-					}
 					if (result.conversation) {
-						loadedConversationId = result.conversation.id;
+						try {
+							const finalData = await fetchAiConversationMessages(result.conversation.id);
+							upsertConversation(finalData.conversation);
+							messages = finalData.messages;
+							loadedConversationId = finalData.conversation.id;
+						} catch {
+							if (result.messages?.length) {
+								messages = result.messages;
+							}
+						}
+						try {
+							await refreshConversations();
+						} catch {
+							// Keep the current conversation list if refresh fails.
+						}
+					} else if (result.messages?.length) {
+						messages = result.messages;
 					}
 					activeStreamConversationId = '';
 					break;
@@ -270,11 +287,10 @@
 			try {
 				loading = true;
 				error = '';
-				const [conversationList, status] = await Promise.all([
-					fetchAiConversations(),
+				const [, status] = await Promise.all([
+					refreshConversations(),
 					fetchAiModelStatus()
 				]);
-				conversations = conversationList;
 				modelStatus = status;
 			} catch (err) {
 				error = err instanceof Error ? err.message : '加载失败';

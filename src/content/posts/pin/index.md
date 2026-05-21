@@ -6,7 +6,6 @@ description: 关于本站的简要说明
 image: img/cover.png
 ---
 
-![](img/cover.png)
 
 云外拾光目前只保留两个主要入口：
 

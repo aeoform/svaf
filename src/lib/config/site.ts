@@ -15,27 +15,42 @@ export const siteConfig = {
 		avatar: '/avatar-home.png',
 		name: '云外拾光',
 		bio: '记录、整理与分享。',
-		links: [
+		social: [
 			{
 				name: 'GitHub',
 				url: 'https://github.com/aeoform/svaf',
-				icon: 'simple-icons:github'
+				icon: 'simple-icons:github',
+				color: '#333333'
 			},
 			{
 				name: 'Bilibili',
 				url: 'https://space.bilibili.com/1163451547',
-				icon: 'simple-icons:bilibili'
+				icon: 'simple-icons:bilibili',
+				color: '#fb7299'
+			}
+		],
+		personal: [
+			{
+				name: 'Alist',
+				url: 'https://alist.aeoform.com',
+				icon: 'mdi:file-tree'
+			},
+			{
+				name: 'Immich',
+				url: 'https://immich.aeoform.com',
+				icon: 'mdi:image-multiple'
 			}
 		]
 	},
+	navLinks: [
+		{ label: '博客', icon: 'mdi:post-outline', href: '/posts' }
+	],
 	links: {
 		github: 'https://github.com/aeoform/svaf'
 	},
 	announcement: {
 		enable: false,
-		// 可选: info | note | tip | important | warning | caution | happy
 		level: 'info' as 'info' | 'note' | 'tip' | 'important' | 'warning' | 'caution' | 'happy',
-		// 支持 HTML
 		content: '欢迎来到云外拾光。'
 	}
 };

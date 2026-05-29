@@ -31,7 +31,7 @@ export const siteConfig = {
 		],
 		personal: [
 			{
-				name: 'Alist',
+				name: 'Openlist',
 				url: 'https://alist.aeoform.com',
 				icon: 'mdi:file-tree'
 			},
@@ -39,6 +39,11 @@ export const siteConfig = {
 				name: 'Immich',
 				url: 'https://immich.aeoform.com',
 				icon: 'mdi:image-multiple'
+			},
+			{
+				name: '手机消息转发',
+				url: 'https://sms.aeoform.com',
+				icon: 'mdi:message-processing'
 			}
 		]
 	},

@@ -107,4 +107,6 @@
 			</CardContent>
 		</Card>
 	</div>
+	#通用格式
+<a href="https://beian.miit.gov.cn/" target="_blank">津ICP备2025034764号</a>
 </div>
